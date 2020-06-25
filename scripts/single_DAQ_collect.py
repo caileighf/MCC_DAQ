@@ -130,12 +130,12 @@ def main(args):
                                         f.write(',')
                                     i+=1
                                 # now reset prev_index to 0
-                                # ..so we start reading from the begining of the buffer
+                                # ..so we start reading from the beginning of the buffer
                                 # ..in the next loop
                                 prev_index=0
 
-                            # if buffer has not wrapped,
-                            # ..read from the prev_index to the current_index
+                            # Read from the prev_index to the current_index
+                            # .. set prev_index to current_index
                             for val in data[prev_index:index]:
                                 f.write('{}'.format(val))
                                 if i%channel_count == 0 and i!=0:
@@ -167,8 +167,7 @@ if __name__ == '__main__':
     parser.add_argument('--file-length-sec', help='Duration of each data file', required=False, type=int)
     parser.add_argument('--known-transmitter-freq', help='If there is a pinger with a know frequency (in Hz)', required=False, type=int)
     parser.add_argument('--data-directory', help='Directory to store csv data from DAQ buffer', required=False)
-    parser.add_argument('--display', help='Display the tetraspectragram for each file in the data directory', action='store_true')
-    parser.add_argument('--debug', help='Show debugging print messsages', action='store_true')
+    parser.add_argument('--debug', help='Show debugging print messages', action='store_true')
     parser.add_argument('--verbose', help='Verbose output - may slow process on slower CPUs', action='store_true')
     parser.add_argument('--mode', help='Data output mode', choices=['binary', 'text'], required=False)
     parser.add_argument('-i', '--interactive', help='Set parameters interactively or, use passed values (or default values)', action='store_true')

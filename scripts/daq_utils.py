@@ -123,6 +123,6 @@ def create_output_str(transfer_status, rate):
     output_str.append('<b>CurrentScanCount  =</b> {}'.format(transfer_status.current_scan_count))
     output_str.append('<b>CurrentIndex      =</b> {}'.format(transfer_status.current_index))
     output_str.append('\n')
-    output_str.append('<b>Channel   | Raw Volatage</b>')
+    output_str.append('<b>Channel   | Raw Voltage</b>')
     output_str.append('<b>------------------------</b>')
     return(output_str)
