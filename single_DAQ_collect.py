@@ -226,16 +226,14 @@ if __name__ == '__main__':
     parser.set_defaults(channels=1, sample_rate=38400, file_length_sec=1.0, data_directory=os.getcwd()+'/data', mode='text')
     args = parser.parse_args()
     os.system('clear')
-    #
-    # Handle interactive config
-    #
+    
     try:
+        #
+        # Handle interactive config
+        #
         if args.interactive and not args.script:
             os.system('clear')
             print_title(title='Interactive Mode -- Hit Enter to keep the default values')
-            # print_formatted_text(HTML('<title>Interactive Mode -- Hit Enter to keep the default values</title>'), style=style)
-            # print_formatted_text(HTML('<title>--------------------------------------------------------</title>'), style=style)
-            # get data dir
             print_pre_prompt(title='Directory to store csv data from DAQ buffer',
                              default=args.data_directory,
                              default_style='path')
@@ -264,6 +262,15 @@ if __name__ == '__main__':
             print_post_prompt(arg='File Length (seconds)',
                               val=args.file_length_sec,
                               val_style='token')
+        else:
+            # make sure the default data_directory exists
+            if not os.path.exists(args.data_directory):
+                os.mkdir(os.path.abspath(args.data_directory))
+            else:
+                args.data_directory = os.path.abspath(args.data_directory)
+        #
+        #   Start main thread
+        #
         main(args)
     except ULException as e:
         print('\n\tUL Specific Exception Thrown: ', e)  # Display any error messages
