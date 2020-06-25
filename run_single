@@ -1,0 +1,2 @@
+#!/bin/bash
+python single_DAQ_collect.py "$@"
