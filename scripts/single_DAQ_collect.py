@@ -11,16 +11,25 @@ import sys
 import time
 import os
 import argparse
-from prompt_toolkit import prompt
-from prompt_toolkit.completion import PathCompleter
-
 from uldaq import (get_daq_device_inventory, DaqDevice, AInScanFlag, ScanStatus,
                    ScanOption, create_float_buffer, InterfaceType, AiInputMode, ULException)
-from prompt_toolkit import print_formatted_text, HTML
-from prompt_toolkit.styles import Style
-from prompt_toolkit.validation import Validator
-
-from daq_utils import print_config, config_daq, config_daq_options, config_ai_device
+# Methods for handling DAQ config and setup
+from daq_utils import (print_config, 
+                       config_daq, 
+                       config_daq_options, 
+                       config_ai_device,
+                       create_output_str,
+                       clear_eol,
+                       reset_cursor)
+# Methods for interactive prompt when user chooses interactive mode at runtime
+from prompt_utils import (print_title,
+                          print_line,
+                          print_lines, 
+                          print_pre_prompt, 
+                          print_post_prompt, 
+                          prompt_user, 
+                          path_validator, PathCompleter,
+                          number_validator, float_validator, style)
 
 def main(args):
     """Single DAQ Collection CONTINUOUS."""
@@ -35,7 +44,7 @@ def main(args):
     high_channel   = args.channels-1
     rate           = args.sample_rate     # rate (float) 
                                           # A/D sample rate in samples per channel per second.
-    samples_per_channel = rate * args.channels * 30
+    samples_per_channel = rate * args.channels * 30 # *30 gives use extra time to read
     file_length_sec = float(args.file_length_sec)
     #
     #   Takes passed args and gathers all connected DAQ devices
@@ -44,7 +53,7 @@ def main(args):
     try:
         daq_device_params = config_daq_options(interface_type=interface_type, script=args.script)
     except RuntimeError as e:
-        print(e)
+        print_line(e)
         exit(1)
 
     # 
@@ -57,11 +66,11 @@ def main(args):
         input_mode, channel_count, v_range = config_daq(daq_device=daq_device, 
                                                         ai_info=ai_info, 
                                                         channel_range=(low_channel, high_channel))
+        os.system('clear')
 
         # Allocate a buffer to receive the data.
         data = create_float_buffer(channel_count, samples_per_channel)
         # Print config options
-        os.system('clear')
         print_config(sample_rate=rate, 
                      file_length=file_length_sec, 
                      data_directory=data_dir, 
@@ -72,7 +81,7 @@ def main(args):
 
         if not args.script:
             try:
-                input('\nHit ENTER to continue\n')
+                prompt_user(text='\nHit ENTER to continue')
             except (NameError, SyntaxError):
                 pass
 
@@ -83,8 +92,9 @@ def main(args):
         prev_index=0
         try:
             start=time.time()
-            print(' | CTRL + C to terminate the process                    ')
-            print(' |----------------------------------------------------- ')
+            print_line('\n | <info>CTRL + C to terminate the process</info>       ')
+            print_line(  ' |----------------------------------------------------- ')
+            time.sleep(0.1)
             while True:
                 try:
                     # Get the status of the background operation
@@ -92,20 +102,18 @@ def main(args):
                     index = transfer_status.current_index
                     reset_cursor()
                     clear_eol()
-                    # Build output string
-                    output_str = []
-                    output_str.append('\n')
-                    output_str.append('Actual scan rate  = {:.3f} Hz\n'.format(rate))
-                    output_str.append('CurrentTotalCount = {}\n'.format(transfer_status.current_total_count))
-                    output_str.append('CurrentScanCount  = {}\n'.format(transfer_status.current_scan_count))
-                    output_str.append('CurrentIndex      = {}\n'.format(transfer_status.current_index))
-                    output_str.append('\n')
-
+                    output_str = create_output_str(transfer_status, rate)
+                    # now append channel values
                     for i in range(channel_count):
-                        output_str.append('Channel [{}] = {:.6f}\n'.format(i+low_channel, data[index + i]))
-                    output_str.append('\n')
-                    print(*output_str)
+                        output_str.append('<b>Channel</b> [<b>{}</b>] = {:.6f}'.format(i+low_channel, data[index + i]))
+                    print_lines(output_str)
+                    print('')
 
+                    #
+                    #   Every <file_length_sec> second(s) read from circular buffer,
+                    #   .. starting at the previous index up to the current index
+                    #   .. then set previous index to current index
+                    #
                     if time.time()-start >= file_length_sec:
                         start=time.time()
                         # write data to file
@@ -152,64 +160,6 @@ def main(args):
                          print_head_space=False)
             raise(KeyboardInterrupt)
 
-def reset_cursor():
-    """Reset the cursor in the terminal window."""
-    sys.stdout.write('\033[1;1H')
-
-def clear_eol():
-    """Clear all characters to the end of the line."""
-    sys.stdout.write('\x1b[2K')
-
-#
-#   For prompt interactive section
-#
-style = Style.from_dict({
-    'error': '#ff0000 italic',
-    'title': '#1245A8 bold',
-    'path': '#44ff00 underline',
-    'token': '#44ff00 italic',
-    'subtitle': '#A9A9A9',
-})
-
-def is_number(text):
-    return(text.isdigit())
-number_validator = Validator.from_callable(is_number,
-                                           error_message='This input contains non-numeric characters',
-                                           move_cursor_to_end=True)
-def is_float(text):
-    try:
-        float(text)
-    except ValueError:
-        return(False)
-    else:
-        return(True)
-float_validator = Validator.from_callable(is_float,
-                                          error_message='This input is not a float or an int',
-                                          move_cursor_to_end=True)
-def is_valid_path(text):
-    return(os.path.exists(text))
-path_validator = Validator.from_callable(is_valid_path,
-                                        error_message='Invalid Path',
-                                        move_cursor_to_end=True)
-
-def print_title(title, print_bar=True):
-    print_formatted_text(HTML('<title>{}</title>'.format(title)), style=style)
-    if print_bar:
-        print_formatted_text(HTML('<title>{}</title>'.format('-'*len(title))), style=style)
-
-def print_pre_prompt(title, default, default_style):
-    print_formatted_text(HTML('<subtitle>{}</subtitle>'.format(title)), style=style)
-    print_formatted_text(HTML('<subtitle>Default: <{}>{}</{}></subtitle>'.format(default_style, 
-                                                                                 default, 
-                                                                                 default_style)), style=style)
-
-def print_post_prompt(arg, val, val_style):
-    print_formatted_text(HTML('<subtitle>{}: <{}>{}</{}></subtitle>'.format(arg,
-                                                                            val_style,
-                                                                            val,
-                                                                            val_style)), style=style)
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--channels', help='Number of channels or elements on the array to record with', required=False, type=int)
@@ -222,9 +172,10 @@ if __name__ == '__main__':
     parser.add_argument('--verbose', help='Verbose output - may slow process on slower CPUs', action='store_true')
     parser.add_argument('--mode', help='Data output mode', choices=['binary', 'text'], required=False)
     parser.add_argument('-i', '--interactive', help='Set parameters interactively or, use passed values (or default values)', action='store_true')
-    parser.add_argument('-s', '--script', help='Run from script (Do not ask for user input)', action='store_true')
+    parser.add_argument('-s', '--script', help='Run from script (Will not ask for user input)', action='store_true')
     parser.set_defaults(channels=1, sample_rate=38400, file_length_sec=1.0, data_directory=os.getcwd()+'/data', mode='text')
     args = parser.parse_args()
+    time.sleep(0.2)
     os.system('clear')
     
     try:
@@ -237,7 +188,7 @@ if __name__ == '__main__':
             print_pre_prompt(title='Directory to store csv data from DAQ buffer',
                              default=args.data_directory,
                              default_style='path')
-            user_input = '{}'.format(prompt('> ', completer=PathCompleter(), validator=path_validator))
+            user_input = prompt_user(text='>', completer=PathCompleter(), validator=path_validator)
             args.data_directory = os.path.abspath(user_input)
             print_post_prompt(arg='Data Directory',
                               val=args.data_directory,
@@ -247,7 +198,7 @@ if __name__ == '__main__':
             print_pre_prompt(title='Sample rate in Hz',
                              default=args.sample_rate,
                              default_style='token')
-            user_input = '{}'.format(prompt('> ', validator=number_validator))
+            user_input = prompt_user(validator=number_validator)
             args.sample_rate = int(user_input)
             print_post_prompt(arg='Sample rate in Hz',
                               val=args.sample_rate,
@@ -257,7 +208,7 @@ if __name__ == '__main__':
             print_pre_prompt(title='File Length (seconds) Duration of each data file',
                              default=args.file_length_sec,
                              default_style='token')
-            user_input = '{}'.format(prompt('> ', validator=float_validator))
+            user_input = prompt_user(validator=float_validator)
             args.file_length_sec = float(user_input)
             print_post_prompt(arg='File Length (seconds)',
                               val=args.file_length_sec,
@@ -273,7 +224,7 @@ if __name__ == '__main__':
         #
         main(args)
     except ULException as e:
-        print('\n\tUL Specific Exception Thrown: ', e)  # Display any error messages
+        print_line('\n\tUL Specific Exception Thrown: ', e)
 
     except KeyboardInterrupt:
-        print('\n\n\tEnding...\n')
+        print_line('\n\n\tEnding...\n')

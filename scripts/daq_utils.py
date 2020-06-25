@@ -2,7 +2,24 @@ from uldaq import (get_daq_device_inventory, DaqDevice, AInScanFlag, ScanStatus,
                    ScanOption, create_float_buffer, InterfaceType, AiInputMode, ULException)
 import time
 import os
+import sys
+import prompt_utils
+from prompt_utils import (daq_validator, 
+                          prompt_user, 
+                          print_pre_prompt_options,
+                          print_line,
+                          available_devices)
+from prompt_toolkit.completion import WordCompleter
+#
+#   For displaying to stdout
+#
+def reset_cursor():
+    """Reset the cursor in the terminal window."""
+    sys.stdout.write('\033[1;1H')
 
+def clear_eol():
+    """Clear all characters to the end of the line."""
+    sys.stdout.write('\x1b[2K')
 #
 #   DAQ Helper methods
 #
@@ -18,44 +35,40 @@ def display_scan_options(bit_mask):
 
 def print_config(sample_rate, file_length, data_directory, input_mode, channel_range, voltage_range, scan_options, print_head_space=True, mode='Text',**kwargs):
     if print_head_space:
-    	print('{}'.format('\n'*(channel_range[1]+6)))
+    	print('{}'.format('\n'*(channel_range[1]+10)))
     else:
     	print('')
-    print(' |----------------------------------------------------- ')
-    print(' | DAQ Configuration:                                   ')
-    print(' |----------------------------------------------------- ')
-    print(' | Sample Rate (Hz)     : %ld        '%sample_rate)
-    print(' | File Length (seconds): %d         '%file_length)
-    print(' | Data Directory       : %s         '%data_directory)
-    print(' | Mode {Binary | Text} : %s         '%mode)
-    print(' | Input Mode           : %s         '%input_mode)
-    print(' | Scan Options         : %s         '%display_scan_options(scan_options))
-    print(' | Voltage Range        : %s         '%voltage_range)
-    print(' | Low Channel          : %d         '%(channel_range[0]))
-    print(' | High Channel         : %d         '%(channel_range[1]))
-    print(' |----------------------------------------------------- ')
+    print_line(' |----------------------------------------------------- ')
+    print_line(' | <info><b>DAQ Configuration:</b></info>                    ')
+    print_line(' |----------------------------------------------------- ')
+    print_line(' | Sample Rate (Hz)     : %ld        '%sample_rate)
+    print_line(' | File Length (seconds): %d         '%file_length)
+    print_line(' | Data Directory       : %s         '%data_directory)
+    print_line(' | Mode {Binary | Text} : %s         '%mode)
+    print_line(' | Input Mode           : %s         '%input_mode)
+    print_line(' | Scan Options         : %s         '%display_scan_options(scan_options))
+    print_line(' | Voltage Range        : %s         '%voltage_range)
+    print_line(' | Low Channel          : %d         '%(channel_range[0]))
+    print_line(' | High Channel         : %d         '%(channel_range[1]))
+    print_line(' |----------------------------------------------------- ')
 
 def config_daq_options(interface_type, script=False):
     # Get descriptors for all of the available DAQ devices.
-    devices = get_daq_device_inventory(interface_type)
+    devices = list(get_daq_device_inventory(interface_type))
     number_of_devices = len(devices)
     if number_of_devices == 0:
         raise RuntimeError('Error: No DAQ devices found')
 
-    print('Found', number_of_devices, 'DAQ device(s):')
-    for i in range(number_of_devices):
-        print('  [', i, '] ', devices[i].product_name, ' (',
-              devices[i].unique_id, ')', sep='')
-
     if script:
-    	descriptor_index = 0
+        descriptor_index = 0
     else:
-	    descriptor_index = input('\nPlease select a DAQ device, enter a number'
-	                             + ' between 0 and '
-	                             + str(number_of_devices - 1) + ': ')
-    descriptor_index = int(descriptor_index)
-    if descriptor_index not in range(number_of_devices):
-        raise RuntimeError('Error: Invalid descriptor index')
+        prompt_utils.available_devices = ['{} ({})'.format(d.product_name, d.unique_id) for d in devices]
+        print_pre_prompt_options(title='Found {} DAQ device(s):'.format(number_of_devices), 
+                                 list_options=prompt_utils.available_devices)
+    
+        device_completer = WordCompleter(prompt_utils.available_devices)
+        descriptor_index = prompt_user(completer=device_completer, validator=daq_validator)
+        descriptor_index = int(prompt_utils.available_devices.index(descriptor_index))
 
     return(devices[descriptor_index])
 
@@ -78,10 +91,6 @@ def config_daq(daq_device, ai_info, channel_range):
     high_channel = channel_range[1]
     # Establish a connection to the DAQ device.
     descriptor = daq_device.get_descriptor()
-    # print('\nConnecting to', descriptor.dev_string, '- please wait...')
-    # For Ethernet devices using a connection_code other than the default
-    # value of zero, change the line below to enter the desired code.
-    # daq_device.connect(connection_code=0)
 
     # The default input mode is SINGLE_ENDED.
     input_mode = AiInputMode.SINGLE_ENDED
@@ -104,3 +113,16 @@ def config_daq(daq_device, ai_info, channel_range):
         range_index = len(ranges) - 1
 
     return(input_mode, channel_count, ranges[range_index])
+
+def create_output_str(transfer_status, rate):
+    # Build output string
+    output_str = []
+    output_str.append('\n')
+    output_str.append('<b>Actual scan rate  =</b> {:.3f} Hz'.format(rate))
+    output_str.append('<b>CurrentTotalCount =</b> {}'.format(transfer_status.current_total_count))
+    output_str.append('<b>CurrentScanCount  =</b> {}'.format(transfer_status.current_scan_count))
+    output_str.append('<b>CurrentIndex      =</b> {}'.format(transfer_status.current_index))
+    output_str.append('\n')
+    output_str.append('<b>Channel   | Raw Volatage</b>')
+    output_str.append('<b>------------------------</b>')
+    return(output_str)
