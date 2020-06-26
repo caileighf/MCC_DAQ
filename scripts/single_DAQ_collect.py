@@ -13,12 +13,14 @@ import os
 import argparse
 from uldaq import (get_daq_device_inventory, DaqDevice, AInScanFlag, ScanStatus,
                    ScanOption, create_float_buffer, InterfaceType, AiInputMode, ULException)
+from async_daq_data_handler import AsyncDAQDataHandler
 # Methods for handling DAQ config and setup
 from daq_utils import (print_config, 
                        config_daq, 
                        config_daq_options, 
                        config_ai_device,
                        create_output_str,
+                       display_scan_options,
                        clear_eol,
                        reset_cursor)
 # Methods for interactive prompt when user chooses interactive mode at runtime
@@ -89,6 +91,16 @@ def main(args):
         rate = ai_device.a_in_scan(low_channel, high_channel, input_mode,
                                    v_range, samples_per_channel,
                                    rate, scan_options, flags, data)
+        async_writer = AsyncDAQDataHandler(float_buffer=data, 
+                                           role='SINGLE', 
+                                           ai_device=ai_device, 
+                                           channel_count=channel_count, 
+                                           data_dir=data_dir,
+                                           sample_rate=rate,
+                                           scan_options=display_scan_options(scan_options),
+                                           v_range=v_range,
+                                           input_mode=input_mode,
+                                           flags=flags)
         prev_index=0
         try:
             start=time.time()
@@ -117,33 +129,7 @@ def main(args):
                     if time.time()-start >= file_length_sec:
                         start=time.time()
                         # write data to file
-                        with open('{}/{:.6f}.txt'.format(data_dir, start), 'w') as f:
-                            i=1
-                            # check if buffer has wrapped
-                            if prev_index > index:
-                                # start at prev_index and read to the end of buffer
-                                for val in data[prev_index:len(data)]:
-                                    f.write('{}'.format(val))
-                                    if i%channel_count == 0 and i!=0:
-                                        f.write('\n')
-                                    else:
-                                        f.write(',')
-                                    i+=1
-                                # now reset prev_index to 0
-                                # ..so we start reading from the beginning of the buffer
-                                # ..in the next loop
-                                prev_index=0
-
-                            # Read from the prev_index to the current_index
-                            # .. set prev_index to current_index
-                            for val in data[prev_index:index]:
-                                f.write('{}'.format(val))
-                                if i%channel_count == 0 and i!=0:
-                                    f.write('\n')
-                                else:
-                                    f.write(',')
-                                i+=1
-                            prev_index=index
+                        async_writer.do_write(start_time=start)
 
                 except (ValueError, NameError, SyntaxError):
                     raise
@@ -165,15 +151,17 @@ if __name__ == '__main__':
     parser.add_argument('--channels', help='Number of channels or elements on the array to record with', required=False, type=int)
     parser.add_argument('--sample-rate', help='Sample rate in Hz', required=False, type=int)
     parser.add_argument('--file-length-sec', help='Duration of each data file', required=False, type=int)
-    parser.add_argument('--known-transmitter-freq', help='If there is a pinger with a know frequency (in Hz)', required=False, type=int)
     parser.add_argument('--data-directory', help='Directory to store csv data from DAQ buffer', required=False)
     parser.add_argument('--debug', help='Show debugging print messages', action='store_true')
+    parser.add_argument('--quiet', help='No Console Output', action='store_true')
     parser.add_argument('--verbose', help='Verbose output - may slow process on slower CPUs', action='store_true')
     parser.add_argument('--mode', help='Data output mode', choices=['binary', 'text'], required=False)
     parser.add_argument('-i', '--interactive', help='Set parameters interactively or, use passed values (or default values)', action='store_true')
     parser.add_argument('-s', '--script', help='Run from script (Will not ask for user input)', action='store_true')
     parser.set_defaults(channels=1, sample_rate=38400, file_length_sec=1.0, data_directory=os.getcwd()+'/data', mode='text')
     args = parser.parse_args()
+    if args.script:
+        args.quiet = True
     time.sleep(0.2)
     os.system('clear')
     
@@ -187,11 +175,21 @@ if __name__ == '__main__':
             print_pre_prompt(title='Directory to store csv data from DAQ buffer',
                              default=args.data_directory,
                              default_style='path')
-            user_input = prompt_user(text='>', completer=PathCompleter(), validator=path_validator)
+            user_input = prompt_user(completer=PathCompleter(), validator=path_validator)
             args.data_directory = os.path.abspath(user_input)
             print_post_prompt(arg='Data Directory',
                               val=args.data_directory,
                               val_style='path')
+
+            # get number of channels
+            print_pre_prompt(title='Number of channels or elements on the array to record with',
+                             default=args.channels,
+                             default_style='token')
+            user_input = prompt_user(validator=number_validator)
+            args.channels = int(user_input)
+            print_post_prompt(arg='Numer of Channels',
+                              val=args.channels,
+                              val_style='token')
 
             # get sample rate
             print_pre_prompt(title='Sample rate in Hz',

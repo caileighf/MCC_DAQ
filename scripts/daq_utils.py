@@ -25,6 +25,7 @@ def clear_eol():
 #
 def display_scan_options(bit_mask):
     """Create a displays string for all scan options."""
+    # import ipdb; ipdb.set_trace() # BREAKPOINT
     options = []
     if bit_mask == ScanOption.DEFAULTIO:
         options.append(ScanOption.DEFAULTIO.name)
@@ -33,13 +34,19 @@ def display_scan_options(bit_mask):
             options.append(option.name)
     return ', '.join(options)
 
-def print_config(sample_rate, file_length, data_directory, input_mode, channel_range, voltage_range, scan_options, print_head_space=True, mode='Text',**kwargs):
+def print_total_channel_count(num_channels):
+    print_line('\nTotal Channels (combined DAQ channel count): <token><b>{}</b></token>'.format(num_channels), l_style='info')
+
+def print_config(sample_rate, file_length, data_directory, input_mode, channel_range, voltage_range, scan_options, role=None, print_head_space=True, mode='Text',**kwargs):
     if print_head_space:
     	print('{}'.format('\n'*(channel_range[1]+10)))
     else:
     	print('')
     print_line(' |----------------------------------------------------- ')
-    print_line(' | <info><b>DAQ Configuration:</b></info>                    ')
+    if role is None:
+        print_line(' | <info><b>DAQ Configuration:</b></info>')
+    else:
+        print_line(' | <info><b>DAQ Configuration for <title>{}</title> device</b></info>'.format(role))
     print_line(' |----------------------------------------------------- ')
     print_line(' | Sample Rate (Hz)     : %ld        '%sample_rate)
     print_line(' | File Length (seconds): %d         '%file_length)
@@ -52,8 +59,38 @@ def print_config(sample_rate, file_length, data_directory, input_mode, channel_r
     print_line(' | High Channel         : %d         '%(channel_range[1]))
     print_line(' |----------------------------------------------------- ')
 
+def config_daq_options_multi(interface_type, num_devices_needed=2, script=False):
+    # Get descriptors for all of the available DAQ devices.
+    # import ipdb; ipdb.set_trace() # BREAKPOINT
+    devices = list(get_daq_device_inventory(interface_type))
+    number_of_devices = len(devices)
+    if number_of_devices == 0:
+        raise RuntimeError('Error: No DAQ devices found')
+
+    selected_devices = []
+    if script:
+        for i in range(num_devices_needed):
+            selected_devices.append(devices[i])
+    else:
+        prompt_utils.available_devices = ['{} ({})'.format(d.product_name, d.unique_id) for d in devices]
+        print_pre_prompt_options(title='Found {} DAQ device(s):'.format(number_of_devices), 
+                                 list_options=prompt_utils.available_devices)
+        for i in range(num_devices_needed):
+            device_completer = WordCompleter(prompt_utils.available_devices)
+            descriptor_index = prompt_user(text='Select Device {}/{} > '.format(i+1, number_of_devices), 
+                                           completer=device_completer, 
+                                           validator=daq_validator)
+            descriptor_index = int(prompt_utils.available_devices.index(descriptor_index))
+            selected_devices.append(devices[descriptor_index])
+            # now remove selected device from options list
+            devices.remove(devices[descriptor_index])
+            prompt_utils.available_devices = ['{} ({})'.format(d.product_name, d.unique_id) for d in devices]
+
+    return(selected_devices)
+
 def config_daq_options(interface_type, script=False):
     # Get descriptors for all of the available DAQ devices.
+    # import ipdb; ipdb.set_trace() # BREAKPOINT
     devices = list(get_daq_device_inventory(interface_type))
     number_of_devices = len(devices)
     if number_of_devices == 0:
@@ -114,10 +151,13 @@ def config_daq(daq_device, ai_info, channel_range):
 
     return(input_mode, channel_count, ranges[range_index])
 
-def create_output_str(transfer_status, rate):
+def create_output_str(transfer_status, rate, role=None):
     # Build output string
     output_str = []
-    output_str.append('\n')
+    if role is None:
+        output_str.append('\n')
+    else:
+        output_str.append('Data from <title>{}</title> Device'.format(role))
     output_str.append('<b>Actual scan rate  =</b> {:.3f} Hz'.format(rate))
     output_str.append('<b>CurrentTotalCount =</b> {}'.format(transfer_status.current_total_count))
     output_str.append('<b>CurrentScanCount  =</b> {}'.format(transfer_status.current_scan_count))
