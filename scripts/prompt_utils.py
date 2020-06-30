@@ -2,7 +2,8 @@ from prompt_toolkit import print_formatted_text, HTML
 from prompt_toolkit.styles import Style
 from prompt_toolkit.validation import Validator
 from prompt_toolkit import prompt
-from prompt_toolkit.completion import PathCompleter, WordCompleter
+from prompt_toolkit.completion import PathCompleter, WordCompleter, ExecutableCompleter
+from prompt_toolkit.shortcuts import yes_no_dialog
 import os
 #
 #   For prompt interactive section
@@ -11,6 +12,7 @@ style = Style.from_dict({
     'error': '#ff0000 italic',
     'title': '#1245A8 bold',
     'path': '#44ff00 underline',
+    'exe': '#44ffff underline',
     'token': '#44ff00 italic',
     'info': '#EEEEEE',
     'info_italic': '#EEEEEE italic',
@@ -29,11 +31,15 @@ daq_validator = Validator.from_callable(is_valid_daq_choice,
                                         move_cursor_to_end=True)
 
 def is_number(text):
+    if text == '':
+        return(True)
     return(text.isdigit())
 number_validator = Validator.from_callable(is_number,
                                            error_message='This input contains non-numeric characters',
                                            move_cursor_to_end=True)
 def is_float(text):
+    if text == '':
+        return(True)
     try:
         float(text)
     except ValueError:
@@ -44,9 +50,27 @@ float_validator = Validator.from_callable(is_float,
                                           error_message='This input is not a float or an int',
                                           move_cursor_to_end=True)
 def is_valid_path(text):
+    if text == '':
+        return(True)
     return(os.path.exists(text))
 path_validator = Validator.from_callable(is_valid_path,
                                         error_message='Invalid Path',
+                                        move_cursor_to_end=True)
+
+def is_valid_serial_port(text):
+    if text == '':
+        return(True)
+    return(os.path.exists(text) and '/dev/' in text)
+serial_port_validator = Validator.from_callable(is_valid_serial_port,
+                                                error_message='Invalid Serial Port',
+                                                move_cursor_to_end=True)
+
+def is_exe(text):
+    if text == '':
+        return(True)
+    return(os.path.isfile(text) and os.access(text, os.X_OK))
+exe_validator = Validator.from_callable(is_exe,
+                                        error_message='File is not executable',
                                         move_cursor_to_end=True)
 
 def print_title(title, print_bar=True):
@@ -81,5 +105,13 @@ def print_post_prompt(arg, val, val_style):
 
 def prompt_user(text='> ', completer=None, validator=None):
     if completer is not None:
-        print_line(line='Hit TAB to see options', l_style='info_italic')
+        if validator == serial_port_validator or validator == path_validator:
+            print_line(line='Hit TAB to see options in cwd', l_style='info_italic')
+        else:
+            print_line(line='Hit TAB to see options', l_style='info_italic')
     return('{}'.format(prompt(text, completer=completer, validator=validator)))
+
+def get_yes_no(title, text):
+    result = yes_no_dialog(title=title,
+                           text=text).run()
+    return(result)

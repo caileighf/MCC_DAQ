@@ -18,7 +18,7 @@ from async_daq_data_handler import AsyncDAQDataHandler
 from daq_utils import (print_config,
                        print_total_channel_count, 
                        config_daq, 
-                       config_daq_options_multi, 
+                       config_daq_options_master_slave, 
                        config_ai_device,
                        create_output_str,
                        display_scan_options,
@@ -80,7 +80,10 @@ def main(args, master_dir, slave_dir):
     #
     daq_device_params = {'MASTER': None, 'SLAVE': None}
     try:
-        devices = config_daq_options_multi(interface_type=interface_type, script=args.script)
+        devices = config_daq_options_master_slave(interface_type=interface_type, 
+                                                  script=args.script, 
+                                                  master_id='01B6492D', 
+                                                  slave_id='01C5B1B5')
         daq_device_params['SLAVE']  = devices[0]
         daq_device_params['MASTER'] = devices[1]
     except RuntimeError as e:
@@ -100,7 +103,6 @@ def main(args, master_dir, slave_dir):
                                                         ai_info=ai_info['SLAVE'], 
                                                         channel_range=(low_channel['SLAVE'], high_channel['SLAVE']))
         os.system('clear')
-        # import ipdb; ipdb.set_trace() # BREAKPOINT
         # Allocate a buffer to receive the data.
         data['SLAVE'] = create_float_buffer(channel_count['SLAVE'], samples_per_channel)
         if not args.quiet:
@@ -281,7 +283,7 @@ if __name__ == '__main__':
     parser.add_argument('--mode', help='Data output mode', choices=['binary', 'text'], required=False)
     parser.add_argument('-i', '--interactive', help='Set parameters interactively or, use passed values (or default values)', action='store_true')
     parser.add_argument('-s', '--script', help='Run from script (Will not ask for user input)', action='store_true')
-    parser.set_defaults(channels=16, sample_rate=38400, file_length_sec=1.0, data_directory=os.getcwd()+'/data', mode='text')
+    parser.set_defaults(channels=16, sample_rate=19200, file_length_sec=1.0, data_directory=os.getcwd()+'/data', mode='text')
     args = parser.parse_args()
     if args.script:
         args.quiet = True
@@ -294,12 +296,13 @@ if __name__ == '__main__':
         #
         if args.interactive and not args.script:
             os.system('clear')
-            print_title(title='Interactive Mode -- Hit Enter to keep the default values')
+            print_title(title='Interactive Mode')
             print_pre_prompt(title='Directory to store csv data from DAQ buffer',
                              default=args.data_directory,
                              default_style='path')
             user_input = prompt_user(completer=PathCompleter(), validator=path_validator)
-            args.data_directory = os.path.abspath(user_input)
+            if user_input != '':
+                args.data_directory = os.path.abspath(user_input)
             print_post_prompt(arg='Data Directory',
                               val=args.data_directory,
                               val_style='path')
@@ -309,7 +312,8 @@ if __name__ == '__main__':
                              default=args.channels,
                              default_style='token')
             user_input = prompt_user(validator=number_validator)
-            args.channels = int(user_input)
+            if user_input != '':
+                args.channels = int(user_input)
             if args.channels <= 1:
                 args.channels = 2
                 print_line('Not enough channels, setting to minimum', l_style='error')
@@ -322,7 +326,8 @@ if __name__ == '__main__':
                              default=args.sample_rate,
                              default_style='token')
             user_input = prompt_user(validator=number_validator)
-            args.sample_rate = int(user_input)
+            if user_input != '':
+                args.sample_rate = int(user_input)
             print_post_prompt(arg='Sample rate in Hz',
                               val=args.sample_rate,
                               val_style='token')
@@ -332,7 +337,8 @@ if __name__ == '__main__':
                              default=args.file_length_sec,
                              default_style='token')
             user_input = prompt_user(validator=float_validator)
-            args.file_length_sec = float(user_input)
+            if user_input != '':
+                args.file_length_sec = float(user_input)
             print_post_prompt(arg='File Length (seconds)',
                               val=args.file_length_sec,
                               val_style='token')

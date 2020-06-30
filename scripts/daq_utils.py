@@ -8,7 +8,8 @@ from prompt_utils import (daq_validator,
                           prompt_user, 
                           print_pre_prompt_options,
                           print_line,
-                          available_devices)
+                          available_devices,
+                          get_yes_no)
 from prompt_toolkit.completion import WordCompleter
 #
 #   For displaying to stdout
@@ -59,7 +60,33 @@ def print_config(sample_rate, file_length, data_directory, input_mode, channel_r
     print_line(' | High Channel         : %d         '%(channel_range[1]))
     print_line(' |----------------------------------------------------- ')
 
-def config_daq_options_multi(interface_type, num_devices_needed=2, script=False):
+def get_daq_choice(role):
+    device_completer = WordCompleter(prompt_utils.available_devices)
+    descriptor_index = prompt_user(text='Select {} Device > '.format(role), 
+                                   completer=device_completer, 
+                                   validator=daq_validator)
+    descriptor_index = int(prompt_utils.available_devices.index(descriptor_index))
+    # import ipdb; ipdb.set_trace() # BREAKPOINT
+    return(descriptor_index)
+
+def confirm_daq_choice(device_params, current_role):
+    # Flash device LED so user can make sure the device is the one they want
+    with DaqDevice(device_params) as daq_device:
+        # start flashing. 0=flash until flash_led() is called with an non-zero value
+        daq_device.flash_led(0)
+        title = 'Confirm {} DAQ Device Selection'.format(current_role)
+        is_correct_device = get_yes_no(title=title, text='The LED of the selected device is flashing. Is it the correct one?')
+        # pass 1 to get it to stop after 1 one flash
+        daq_device.flash_led(1)
+        time.sleep(0.2)
+        return(is_correct_device)
+
+def update_available_devices(devices, descriptor_index):
+    # now remove selected device from options list
+    devices.remove(devices[descriptor_index])
+    prompt_utils.available_devices = ['{} ({})'.format(d.product_name, d.unique_id) for d in devices]
+
+def config_daq_options_master_slave(interface_type, script=False, master_id=None, slave_id=None):
     # Get descriptors for all of the available DAQ devices.
     # import ipdb; ipdb.set_trace() # BREAKPOINT
     devices = list(get_daq_device_inventory(interface_type))
@@ -68,23 +95,40 @@ def config_daq_options_multi(interface_type, num_devices_needed=2, script=False)
         raise RuntimeError('Error: No DAQ devices found')
 
     selected_devices = []
-    if script:
-        for i in range(num_devices_needed):
-            selected_devices.append(devices[i])
+    if script and master_id != None and slave_id != None:
+        master = None
+        slave  = None
+        for device in devices:
+            if device.unique_id == master_id:
+                master = device
+            elif device.unique_id == slave_id:
+                slave = device
+        if master == None or slave == None:
+            print_line('Could not find know {} ID'.format('MASTER' if master == None else 'SLAVE'))
+            # call method again without script arg
+            selected_devices = config_daq_options_master_slave(interface_type=interface_type)
+        else:
+            selected_devices.append(slave)
+            selected_devices.append(master)
     else:
         prompt_utils.available_devices = ['{} ({})'.format(d.product_name, d.unique_id) for d in devices]
         print_pre_prompt_options(title='Found {} DAQ device(s):'.format(number_of_devices), 
                                  list_options=prompt_utils.available_devices)
-        for i in range(num_devices_needed):
-            device_completer = WordCompleter(prompt_utils.available_devices)
-            descriptor_index = prompt_user(text='Select Device {}/{} > '.format(i+1, number_of_devices), 
-                                           completer=device_completer, 
-                                           validator=daq_validator)
-            descriptor_index = int(prompt_utils.available_devices.index(descriptor_index))
-            selected_devices.append(devices[descriptor_index])
-            # now remove selected device from options list
-            devices.remove(devices[descriptor_index])
-            prompt_utils.available_devices = ['{} ({})'.format(d.product_name, d.unique_id) for d in devices]
+
+        # SLAVE DAQ first
+        descriptor_index = get_daq_choice(role='SLAVE')
+        while not confirm_daq_choice(device_params=devices[descriptor_index],
+                                     current_role='SLAVE'):
+            descriptor_index = get_daq_choice(role='SLAVE')
+        selected_devices.append(devices[descriptor_index])
+        update_available_devices(devices, descriptor_index)
+
+        # MASTER DAQ second
+        descriptor_index = get_daq_choice(role='MASTER')
+        while not confirm_daq_choice(device_params=devices[descriptor_index],
+                                     current_role='MASTER'):
+            descriptor_index = get_daq_choice(role='MASTER')
+        selected_devices.append(devices[descriptor_index])
 
     return(selected_devices)
 
