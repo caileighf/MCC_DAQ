@@ -13,7 +13,8 @@ import os
 import argparse
 from uldaq import (get_daq_device_inventory, DaqDevice, AInScanFlag, ScanStatus,
                    ScanOption, create_float_buffer, InterfaceType, AiInputMode, ULException)
-from async_daq_data_handler import AsyncDAQDataHandler
+from async_daq_data_handler2 import AsyncDAQDataHandler
+import async_daq_data_handler2
 # Methods for handling DAQ config and setup
 from daq_utils import (print_config,
                        print_total_channel_count, 
@@ -185,6 +186,13 @@ def main(args, master_dir, slave_dir):
                                                       v_range=v_range['MASTER'],
                                                       input_mode=input_mode['MASTER'],
                                                       flags=flags['MASTER'])
+            
+            #
+            #   Let Async file writes know we're ready 
+            #   .. so they can start writing
+            #
+            async_writer_MASTER.ready = True
+            async_writer_SLAVE.ready  = True
 
             prev_index      = {'MASTER': 0, 'SLAVE': 0}
             index           = {'MASTER': 0, 'SLAVE': 0}
@@ -230,19 +238,17 @@ def main(args, master_dir, slave_dir):
                             print_lines(output_str)
 
                         #
-                        #   Every <file_length_sec> second(s) read from circular buffer,
-                        #   .. starting at the previous index up to the current index
-                        #   .. then set previous index to current index
+                        #   All file writing happens in another thread. 
+                        #   .. run time.sleep(file_length) to print out info for user
                         #
-                        if time.time()-start >= file_length_sec:
-                            start=time.time()
-                            # write data to file
-                            async_writer_MASTER.do_write(start_time=start)
-                            async_writer_SLAVE.do_write(start_time=start)
+                        time.sleep(file_length_sec)
+                        
+
                     except Exception as e:
-                        import ipdb; ipdb.set_trace() # BREAKPOINT
+                        raise
                     except (ValueError, NameError, SyntaxError):
                         raise
+
                 os.system('clear')
                 print('Outside While true!')
             except KeyboardInterrupt:
@@ -270,6 +276,10 @@ def main(args, master_dir, slave_dir):
                                  role='SLAVE',
                                  print_head_space=False)
                 raise(KeyboardInterrupt)
+            finally:
+                async_writer_MASTER.shutdown = True
+                async_writer_SLAVE.shutdown  = True
+                time.sleep(2)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -285,8 +295,8 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--script', help='Run from script (Will not ask for user input)', action='store_true')
     parser.set_defaults(channels=16, sample_rate=19200, file_length_sec=1.0, data_directory=os.getcwd()+'/data', mode='text')
     args = parser.parse_args()
-    if args.script:
-        args.quiet = True
+    # if args.script:
+    #     args.quiet = True
     time.sleep(0.2)
     os.system('clear')
     
