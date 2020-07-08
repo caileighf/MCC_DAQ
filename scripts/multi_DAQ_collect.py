@@ -91,6 +91,7 @@ def main(args, master_dir, slave_dir):
         print_line(e)
         exit(1)
 
+    start_test = time.time()
     # 
     #   Connect to the selected DAQ with the context manager
     #
@@ -242,7 +243,11 @@ def main(args, master_dir, slave_dir):
                         #   .. run time.sleep(file_length) to print out info for user
                         #
                         time.sleep(file_length_sec)
-                        
+                        if time.time() - start_test >= 10 and args.test:
+                            # breakout!
+                            print_line('Leaving from test!')
+                            time.sleep(1)
+                            raise(KeyboardInterrupt)
 
                     except Exception as e:
                         raise
@@ -253,7 +258,8 @@ def main(args, master_dir, slave_dir):
                 print('Outside While true!')
             except KeyboardInterrupt:
                 time.sleep(0.2)
-                os.system('clear')
+                if not args.test:
+                    os.system('clear')
                 if not args.quiet:
                     # Print config options
                     print_config(sample_rate=rate['MASTER'], 
@@ -293,10 +299,11 @@ if __name__ == '__main__':
     parser.add_argument('--mode', help='Data output mode', choices=['binary', 'text'], required=False)
     parser.add_argument('-i', '--interactive', help='Set parameters interactively or, use passed values (or default values)', action='store_true')
     parser.add_argument('-s', '--script', help='Run from script (Will not ask for user input)', action='store_true')
+    parser.add_argument('-t', '--test', help='Run as test and exit smoothly', action='store_true')
     parser.set_defaults(channels=16, sample_rate=19200, file_length_sec=1.0, data_directory=os.getcwd()+'/data', mode='text')
     args = parser.parse_args()
-    # if args.script:
-    #     args.quiet = True
+    if args.test:
+        args.quiet = True
     time.sleep(0.2)
     os.system('clear')
     

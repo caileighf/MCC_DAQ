@@ -62,7 +62,7 @@ class AsyncDAQDataHandler(object):
                     if self.ready:
                         self.run()
         except Exception as e:
-            import ipdb; ipdb.set_trace() # BREAKPOINT
+            # import ipdb; ipdb.set_trace() # BREAKPOINT
             with open(self.log_filename, 'a') as l: 
                 l.write('\n![{}] Caught exception: {}\n repr({}) \n'.format(datetime.now(), e, repr(e)))
                 l.write('!')
