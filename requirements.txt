@@ -2,3 +2,4 @@ uldaq==1.2.0
 prompt-toolkit==3.0.5
 ipdb==0.13.3
 simpleaudio==1.0.4
+matplotlib==3.2.2

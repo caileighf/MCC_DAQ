@@ -11,6 +11,7 @@ import sys
 import time
 import os
 import argparse
+from datetime import datetime
 from uldaq import (get_daq_device_inventory, DaqDevice, AInScanFlag, ScanStatus,
                    ScanOption, create_float_buffer, InterfaceType, AiInputMode, ULException)
 from async_daq_data_handler2 import AsyncDAQDataHandler
@@ -83,8 +84,8 @@ def main(args, master_dir, slave_dir):
     try:
         devices = config_daq_options_master_slave(interface_type=interface_type, 
                                                   script=args.script, 
-                                                  master_id='01B6492D', 
-                                                  slave_id='01C5B1B5')
+                                                  master_id='01C5B1B5', 
+                                                  slave_id='01B6492D')
         daq_device_params['SLAVE']  = devices[0]
         daq_device_params['MASTER'] = devices[1]
     except RuntimeError as e:
@@ -300,7 +301,7 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--interactive', help='Set parameters interactively or, use passed values (or default values)', action='store_true')
     parser.add_argument('-s', '--script', help='Run from script (Will not ask for user input)', action='store_true')
     parser.add_argument('-t', '--test', help='Run as test and exit smoothly', action='store_true')
-    parser.set_defaults(channels=16, sample_rate=19200, file_length_sec=1.0, data_directory=os.getcwd()+'/data', mode='text')
+    parser.set_defaults(channels=16, sample_rate=19200, file_length_sec=1.0, data_directory='{}/data_{}'.format(os.getcwd(), datetime.now()), mode='text')
     args = parser.parse_args()
     if args.test:
         args.quiet = True
@@ -320,6 +321,9 @@ if __name__ == '__main__':
             user_input = prompt_user(completer=PathCompleter(), validator=path_validator)
             if user_input != '':
                 args.data_directory = os.path.abspath(user_input)
+            else:
+                if not os.path.exists(args.data_directory):
+                    os.mkdir(args.data_directory)
             print_post_prompt(arg='Data Directory',
                               val=args.data_directory,
                               val_style='path')

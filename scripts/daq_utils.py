@@ -40,9 +40,9 @@ def print_total_channel_count(num_channels):
 
 def print_config(sample_rate, file_length, data_directory, input_mode, channel_range, voltage_range, scan_options, role=None, print_head_space=True, mode='Text',**kwargs):
     if print_head_space:
-    	print('{}'.format('\n'*(channel_range[1]+10)))
+        print('{}'.format('\n'*(channel_range[1]+10)))
     else:
-    	print('')
+        print('')
     print_line(' |----------------------------------------------------- ')
     if role is None:
         print_line(' | <info><b>DAQ Configuration:</b></info>')
@@ -95,7 +95,7 @@ def config_daq_options_master_slave(interface_type, script=False, master_id=None
         raise RuntimeError('Error: No DAQ devices found')
 
     selected_devices = []
-    if script and master_id != None and slave_id != None:
+    if script or master_id != None and slave_id != None:
         master = None
         slave  = None
         for device in devices:
