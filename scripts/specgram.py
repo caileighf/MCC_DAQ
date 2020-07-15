@@ -116,7 +116,7 @@ def make_fig(t, x, NFFT, Fs, png_file_name, title, start_time, selected_channel)
 
     # save fig and output progress to console
     plt.savefig(png_file_name)
-    # print('Created: ' + png_file_name)
+    print('Created: ' + png_file_name)
     plt.close()
 
 def get_files(path, role):
