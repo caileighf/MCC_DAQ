@@ -9,7 +9,6 @@ import time
 from datetime import datetime
 from matplotlib.gridspec import GridSpec
 from prompt_toolkit.shortcuts import ProgressBar
-
 #
 # This method pull n channel data from file and returns list of floats
 def get_data(filename, selected_channel):
@@ -23,30 +22,6 @@ def get_data(filename, selected_channel):
             channel_data = line.split(',')
             data.append(float(channel_data[selected_channel]))
     return(data)
-
-#
-# This method takes a list of files and a chunk size and
-# .. yields the list of floats returned by get_data() for chunk_size # of files
-# .. Use this in a for loop for getting data that spans multiple files
-# def batch_files(files, chunk_size, selected_channel):
-#     start = float(files[0].stem)
-#     with ProgressBar() as pb:
-#         i = 0
-#         for file in pb(files):
-#             # append file data to list
-#             data = get_data(file, selected_channel)
-#             if i % chunk_size == 0:
-#                 yield start, data
-#                 # now reset start time to next file
-#                 try:
-#                     start = float(files[i+1].stem)
-#                 except IndexError:
-#                     # done! return
-#                     return(None, None)
-#             else:
-#                 i += 1
-
-#     return(start, data)
 
 #
 # This method takes a list of files and a chunk size and

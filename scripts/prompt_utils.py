@@ -183,9 +183,14 @@ def print_pre_prompt_options(title, list_options):
 
 def print_pre_prompt(title, default, default_style):
     print_formatted_text(HTML('<subtitle>{}</subtitle>'.format(title)), style=style)
-    print_formatted_text(HTML('<subtitle>Default: <{}>{}</{}></subtitle>'.format(default_style, 
-                                                                                 default, 
-                                                                                 default_style)), style=style)
+    if default == None:
+        print_formatted_text(HTML('<subtitle>Default: <{}>{}</{}></subtitle>'.format(default_style, 
+                                                                                     default, 
+                                                                                     default_style)), style=style)
+    else:
+        print_formatted_text(HTML('<subtitle>Default: <{}>{}</{}></subtitle> <info_italic>Hit Enter to keep default</info_italic>'.format(default_style, 
+                                                                                     default, 
+                                                                                     default_style)), style=style)
 
 def print_post_prompt(arg, val, val_style):
     print_formatted_text(HTML('<subtitle><b>{}</b>: <{}>{}</{}></subtitle>\n'.format(arg,

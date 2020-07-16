@@ -21,7 +21,7 @@ import os
 import time
 import datetime
 
-def get_available_methods():
+def get_available_methods(as_dict=False):
     methods = [
         (get_date, 'Date input'),
         (get_time, 'Time input'),
@@ -30,6 +30,10 @@ def get_available_methods():
         (get_int, 'Integer input'),
         (get_float, 'Float input'),
     ]
+    if as_dict:
+        methods = [(x[1], x[0]) for x in methods]
+        methods = dict(methods)
+    
     return(methods)
 
 def get_blank_param():
@@ -40,7 +44,7 @@ def get_blank_param():
         'validator': None,
         'default': None,
         'default_style': None,
-        'method': (None, None),
+        'method': None,
     }
     return(param)
 
@@ -55,7 +59,7 @@ def interactive_params(params):
     results = []
     for param in params:
         kwargs = mask_null_kwargs(param)
-        results.append((param['arg_name'], param['method'][0](**kwargs)))
+        results.append((param['arg_name'], param['method'](**kwargs)))
     return(results)
 
 def handle_null(user_input, error, completer, validator, default):
@@ -70,22 +74,76 @@ def handle_null(user_input, error, completer, validator, default):
 
     return(user_input)
 
-def get_window_of_time(**kwargs):
-    # get start date & time
+def _get_window_of_time(start_time=None, start_date=None, stop_time=None, stop_date=None):
+    #
+    #   HANDLE START
     start_date = get_date(title='Please enter a start date',
-                          arg_name='Start date',)
+                          arg_name='Start date',
+                          default=start_date)
     start_time = get_time(title='Please enter a start time',
-                          arg_name='Start time',)
-    # get stop date & time
-    stop_date = get_date(title='Please enter a stop date',
-                         arg_name='Stop date',
-                         default=start_date)
-    stop_time = get_time(title='Please enter a stop time',
-                         arg_name='Stop time',
-                         default=start_time)
+                          arg_name='Start time',
+                          default=start_time)
+    #
+    #   HANDLE STOP
+    if stop_date != None:
+        stop_date = get_date(title='Please enter a stop date',
+                             arg_name='Stop date',
+                             default=stop_date)
+    else:
+        stop_date = get_date(title='Please enter a stop date',
+                             arg_name='Stop date',
+                             default=start_date)
+
+    if stop_time != None:
+        stop_time = get_time(title='Please enter a stop time',
+                             arg_name='Stop time',
+                             default=stop_time)
+    else:
+        stop_time = get_time(title='Please enter a stop time',
+                             arg_name='Stop time',
+                             default=start_time)
+
     # convert to datetime obj
     start = datetime.datetime.combine(start_date, start_time)
     stop = datetime.datetime.combine(stop_date, stop_time)
+    return(start, stop)
+
+def get_window_of_time(start_datetime=None, start_date=None, stop_datetime=None, stop_date=None):
+    #
+    #   HANDLE START
+    if start_datetime != None:
+        start_date = start_datetime.date()
+        start_time = start_datetime.time()
+    elif start_date != None:
+        start_date = start_date
+        start_time = None
+
+    #
+    #   HANDLE STOP
+    if stop_datetime != None:
+        stop_date = stop_datetime.date()
+        stop_time = stop_datetime.time()
+    elif stop_date != None:
+        stop_date = stop_date
+        stop_time = None
+
+    start, stop = _get_window_of_time(start_time=start_time,
+                                      start_date=start_date,
+                                      stop_time=stop_time,
+                                      stop_date=stop_date)
+
+    # check if stop happens after start
+    while start > stop:
+        print_line('Stop time happens prior to start time... Try again', l_style='error')
+        if start.date() > stop.date():
+            # potentially an issue with passed start/stop
+            # call again but don't pass old values
+            start, stop = _get_window_of_time()
+        else:
+            start, stop = _get_window_of_time(start_time=start_time,
+                                              start_date=start_date,
+                                              stop_time=stop_time,
+                                              stop_date=stop_date)
 
     return(start, stop)
 
@@ -171,8 +229,11 @@ def get_time(title='Please enter a time',
                              validator=validator, 
                              default=default)
 
-    hr, mi, se = [int(x) for x in user_input.split(':')]
-    time_val = datetime.time(hour=hr, minute=mi, second=se, tzinfo=tzinfo)
+    if isinstance(user_input, datetime.time):
+        time_val = user_input
+    else:
+        hr, mi, se = [int(x) for x in user_input.split(':')]
+        time_val = datetime.time(hour=hr, minute=mi, second=se, tzinfo=tzinfo)
     print_post_prompt(arg=arg_name,
                       val=time_val,
                       val_style=default_style) 
@@ -196,8 +257,11 @@ def get_date(title='Please enter a date',
                              validator=validator, 
                              default=default)
 
-    yr, mo, da = [int(x) for x in user_input.split('-')]
-    date_val = datetime.date(year=yr, month=mo, day=da)
+    if isinstance(user_input, datetime.date):
+        date_val = user_input
+    else:
+        yr, mo, da = [int(x) for x in user_input.split('-')]
+        date_val = datetime.date(year=yr, month=mo, day=da)
     print_post_prompt(arg=arg_name,
                       val=date_val,
                       val_style=default_style) 
@@ -243,5 +307,9 @@ if __name__ == '__main__':
         #   Start main thread
         #
         main(results_array)
+    except TypeError:
+        pass
     except KeyboardInterrupt:
+        pass
+    finally:
         print_line('\n\n\tEnding...\n')
