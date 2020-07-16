@@ -11,6 +11,8 @@ from matplotlib.gridspec import GridSpec
 from prompt_toolkit.shortcuts import ProgressBar
 from interactive_params import interactive_params, get_blank_param, get_available_methods
 from prompt_utils import print_line, get_yes_no
+import scipy.io as sio
+import pickle as pl
 
 #
 # This method pull n channel data from file and returns list of floats
@@ -72,7 +74,7 @@ def get_files_in_window(files, start_t, end_t):
 #
 # This method takes the voltage and time data for a specific roles
 # .. data on a selected channel to create multiple plots
-def make_fig(t, x, NFFT, Fs, png_file_name, title, start_time, selected_channel, show=False):
+def make_fig(t, x, NFFT, Fs, png_file_name, title, start_time, selected_channel, pickle_fig=True, show=False):
     fig = plt.figure(constrained_layout=True)
     fig.set_size_inches(17, 11)
 
@@ -101,11 +103,28 @@ def make_fig(t, x, NFFT, Fs, png_file_name, title, start_time, selected_channel,
     fig.suptitle(title, fontsize=16)
 
     # save fig and output progress to console
-    plt.savefig(png_file_name)
+    plt.savefig('{}.png'.format(png_file_name))
+    if pickle_fig:
+        # Save figure handle to disk
+        with open('{}.pickle'.format(png_file_name), 'wb') as f:
+            pl.dump(fig, f)
+            print_line('<info_italic>Created:</info_italic> {}.pickle'.format(png_file_name))
+
     if show:
         plt.show()
-    print_line('<info_italic>Created:</info_italic> {}'.format(png_file_name))
+    print_line('<info_italic>Created:</info_italic> {}.png'.format(png_file_name))
     plt.close()
+
+def save_mat(t, x, NFFT, Fs, png_file_name, selected_channel, role):
+    params = {
+        'uniform_time_vector': np.array(t),
+        'voltage_vector': np.array(x),
+        'NFFT': NFFT,
+        'Fs': Fs,
+        'channel': selected_channel,
+        'role': role,
+    }
+    sio.savemat('{}.mat'.format(png_file_name), params)
 
 def get_files(path, role):
     return(sorted(pathlib.Path('{}/{}_DAQ/'.format(path, role)).glob('1*.txt')))
@@ -205,9 +224,11 @@ def main(args):
             t = np.linspace(0.0, len(data), len(data))
             x = data
             # create the png file name
-            png_file_name = '{}/{}_ch{}_{}.png'.format(fig_dir[role[i]], role[i], args.channel, float(files_in_window[0].stem))
+            png_file_name = '{}/{}_ch{}_{}'.format(fig_dir[role[i]], role[i], args.channel, float(files_in_window[0].stem))
             # this will create and save the figure
             make_fig(t, x, NFFT, Fs, png_file_name, full_title, args.start, args.channel, show=args.display)
+            # create .mat
+            save_mat(t, x, NFFT, Fs, png_file_name, args.channel, role[i])
 
         print_line('\nDone with plots!', l_style='title')
         break
