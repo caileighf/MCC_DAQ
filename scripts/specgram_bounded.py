@@ -120,18 +120,6 @@ def get_fig_dir(path, role, postfix):
     return(fig_dir)
 
 def main(args):
-    data_files = {}
-    data = {}
-    fig_dir = {}
-    figs = {}
-    role = args.role
-
-    for r in role:
-        data_files[r] = get_files(path=args.data_directory, role=r)
-        fig_dir[r]    = get_fig_dir(path=args.data_directory, role=r, postfix=args.postfix)
-        data[r]       = []
-        figs[r]       = []
-
     #
     # Determine chunk size
     # .. first check is user wants to do more than one file per plot
@@ -155,6 +143,18 @@ def main(args):
         exit()
     else:
         print_line('<title>Window Duration:</title> {}\n'.format(duration_str))
+
+    data_files = {}
+    data = {}
+    fig_dir = {}
+    figs = {}
+    role = args.role
+
+    for r in role:
+        data_files[r] = get_files(path=args.data_directory, role=r)
+        fig_dir[r]    = get_fig_dir(path=args.data_directory, role=r, postfix=args.postfix)
+        data[r]       = []
+        figs[r]       = []
     # batch size for how many files to read at once
     # .. if duration is 1 hour,
     # .. 60 sec * 60 mins = 3600 seconds, 
