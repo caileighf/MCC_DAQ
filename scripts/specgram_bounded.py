@@ -110,8 +110,8 @@ def make_fig(t, x, NFFT, Fs, png_file_name, title, start_time, selected_channel,
 def get_files(path, role):
     return(sorted(pathlib.Path('{}/{}_DAQ/'.format(path, role)).glob('1*.txt')))
 
-def get_fig_dir(path, role):
-    fig_dir = '{}/{}_DAQ/figs'.format(path, role)
+def get_fig_dir(path, role, postfix):
+    fig_dir = '{}/{}_DAQ/figs_{}'.format(path, role, postfix)
     fig_dir = os.path.abspath(fig_dir)
 
     if not os.path.exists(fig_dir):
@@ -128,7 +128,7 @@ def main(args):
 
     for r in role:
         data_files[r] = get_files(path=args.data_directory, role=r)
-        fig_dir[r]    = get_fig_dir(path=args.data_directory, role=r)
+        fig_dir[r]    = get_fig_dir(path=args.data_directory, role=r, postfix=args.postfix)
         data[r]       = []
         figs[r]       = []
 
@@ -215,6 +215,7 @@ def main(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--postfix', help='Postfix for fig directory', required=False, type=str)
     parser.add_argument('--channel', help='Which channel data should be used', required=False, type=int)
     parser.add_argument('--sample-rate', help='Sample rate in Hz', required=False, type=int)
     parser.add_argument('--nfft', help='NFFT', required=False, type=int)
@@ -230,7 +231,8 @@ if __name__ == '__main__':
     parser.add_argument('-s', '--script', help='Run from script (Will not ask for user input)', action='store_true')
     parser.add_argument('-i', '--interactive', help='Interactive time', action='store_true')
     parser.add_argument('--display', help='Display each plot as they are created -- this will pause execution until the plot is closed', action='store_true')
-    parser.set_defaults(channel=0, 
+    parser.set_defaults(postfix='long_duration',
+                        channel=0, 
                         sample_rate=19200,
                         nfft=256,
                         file_length_sec=1.0,
