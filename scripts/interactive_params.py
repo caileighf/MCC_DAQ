@@ -111,21 +111,21 @@ def _get_window_of_time(start_time=None, start_date=None, stop_time=None, stop_d
 def get_window_of_time(start_datetime=None, start_date=None, stop_datetime=None, stop_date=None):
     #
     #   HANDLE START
+    start_time = None
     if start_datetime != None:
         start_date = start_datetime.date()
         start_time = start_datetime.time()
     elif start_date != None:
         start_date = start_date
-        start_time = None
-
+    
     #
     #   HANDLE STOP
+    stop_time = None
     if stop_datetime != None:
         stop_date = stop_datetime.date()
         stop_time = stop_datetime.time()
     elif stop_date != None:
         stop_date = stop_date
-        stop_time = None
 
     start, stop = _get_window_of_time(start_time=start_time,
                                       start_date=start_date,

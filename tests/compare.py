@@ -9,111 +9,111 @@ import os
 import sys
 import csv
 import subprocess
+import argparse
 from prompt_toolkit import prompt
+import traceback
 
-def get_data(files):
+def get_data(filename):
     data = []
-    with open(files) as csvfile:
+    with open(filename) as csvfile:
         data = [float(x[0]) for x in csv.reader(csvfile)]
     return(data)
 
-def main(project_root, data_dir, new_tone_test, start_time):
-    master_dir   = '{}/MASTER_DAQ'.format(data_dir)
-    slave_dir    = '{}/SLAVE_DAQ'.format(data_dir)
+def get_data_across_files(files, Fs=19100):
+    data = []
+    start = float(files[0].stem)
+    for file in files:
+        data.extend(get_data(filename=file))
+    return(start, data[:len(files)*Fs])
 
-    if new_tone_test:
-        # sleep and let daq collect data without tone
-        print('About to sleep for 4 seconds to allow the daq to collect data without the tone')
-        time.sleep(4)
-
-        filename = 'singletone.wav'
-
-        wave_obj = sa.WaveObject.from_wave_file(filename)
-
-    # get start time for tone
-    start_t = time.time()
-    if not new_tone_test:
-        start_t = start_time
+def main(args):
+    if args.data_dir[-1] == '/':
+        master_dir = '{}MASTER_DAQ'.format(args.data_dir)
+        slave_dir  = '{}SLAVE_DAQ'.format(args.data_dir)
     else:
-        # import ipdb; ipdb.set_trace() # BREAKPOINT
+        master_dir = '{}/MASTER_DAQ'.format(args.data_dir)
+        slave_dir  = '{}/SLAVE_DAQ'.format(args.data_dir)
+
+    prompt('Hit enter when the test leads are connected to the payload box and the DAQs are running.')
+
+    filename = 'singletone.wav'
+    wave_obj = sa.WaveObject.from_wave_file(filename)
+    # set start time for tone
+    # start_t = time.time()
+    # print('\nTone started at: {}\n'.format(start_t))
+    # play_obj = wave_obj.play()
+    # print('About to sleep for 3 seconds to allow the daq to collect data WITH the tone')
+    # time.sleep(.5)
+    # play_obj.stop()
+    # stop_t = time.time()
+    # print('\nTone stopped at: {}\n'.format(stop_t))
+    # print('Waiting 3 seconds for DAQ file writer to catch up...')
+    # time.sleep(3)
+    # grab data files from both daqs
+
+    for i in range(3):
         play_obj = wave_obj.play()
+        time.sleep(0.5)
+        play_obj.stop()
+        time.sleep(0.8)
+    time.sleep(1)
 
-    if new_tone_test:
-        # TODO confirm wav file is long enough (this one is 20 sec)
-        print('About to sleep for 5 seconds to allow the daq to collect data WITH the tone')
-        time.sleep(5)
-        # get stop time for tone
-        stop_t = time.time()
-
-    # import ipdb; ipdb.set_trace() # BREAKPOINT
     master_files = sorted(pathlib.Path(master_dir).glob('1*.txt'))
     slave_files  = sorted(pathlib.Path(slave_dir).glob('1*.txt'))
 
+    try:
+        assert len(master_files) == len(slave_files)
+    except AssertionError:
+        stop_index = min([len(master_files), len(slave_files)])
+        master_files = master_files[:stop_index]
+        slave_files = slave_files[:stop_index]
+        assert len(master_files) == len(slave_files)
+
+    print('Length of master files list: {}'.format(len(master_files)))
+    print('Length of slave files list: {}'.format(len(slave_files)))
+
     file_with_tone = {
-        'MASTER': [],
-        'SLAVE': [],
+        'MASTER': master_files[-6:-1],
+        'SLAVE': slave_files[-6:-1],
         }
 
-    # print(master_dir)
-    print('length of master files list: {}'.format(len(master_files)))
-    # print(slave_dir)
-    print('length of slave files list: {}'.format(len(slave_files)))
-    # find file closest to start of tone ---------> MASTER
-    for i, file in enumerate(master_files):
-        # print(file.name)
-        # print(start_t)
-        if float(file.stem) >= float(start_t):
-            file_with_tone['MASTER'].append(file)
-            file_with_tone['MASTER'].append(master_files[i+1])
-            break
+    print('Master files WITH tone:')
+    [print('[{}]: {}'.format(i, file)) for i, file in enumerate(file_with_tone['MASTER'])]
+    print('Slave files WITH tone:')
+    [print('[{}]: {}'.format(i, file)) for i, file in enumerate(file_with_tone['SLAVE'])]
 
-    # find file closest to start of tone ---------> SLAVE
-    for i, file in enumerate(slave_files):
-        # print(file.name)
-        # print(start_t)
-        if float(file.stem) >= float(start_t):
-            file_with_tone['SLAVE'].append(file)
-            file_with_tone['SLAVE'].append(slave_files[i+1])
-            break
+    t_start_master, master_data = get_data_across_files(file_with_tone['MASTER'])
+    t_start_slave, slave_data = get_data_across_files(file_with_tone['SLAVE'])
 
-    print('Master file: {}'.format(file_with_tone['MASTER']))
-    print('Slave file:  {}'.format(file_with_tone['SLAVE']))
     try:
-        t_start_slave = float(file_with_tone['SLAVE'][0].stem)
-        t_start_master = float(file_with_tone['MASTER'][0].stem)
-    except Exception as e:
-        import ipdb; ipdb.set_trace() # BREAKPOINT
+        assert len(master_data) == len(slave_data)
+        assert len(file_with_tone['MASTER']) == len(file_with_tone['SLAVE'])
+    except AssertionError:
+        traceback.print_exc()
+        return
 
-    master  = get_data(file_with_tone['MASTER'][0])
-    master += get_data(file_with_tone['MASTER'][1])
+    time_vector_m = np.linspace(0.0, float(len(file_with_tone['MASTER'])), len(master_data))
+    time_vector_s = np.linspace(0.0, float(len(file_with_tone['SLAVE'])), len(slave_data))
 
-    slave =  get_data(file_with_tone['SLAVE'][0])
-    slave += get_data(file_with_tone['SLAVE'][1])
+    fig = plt.figure(constrained_layout=True)
+    fig.set_size_inches(12, 10)
 
-    time_vector_m = np.linspace(0.0, 2.0, len(master))
-    time_vector_s = np.linspace(0.0, 2.0, len(slave))
+    plt.plot(time_vector_m, master_data, 'r,', markersize=0.4, label='MASTER')
+    plt.plot((time_vector_s+t_start_slave-t_start_master), slave_data, 'b,', markersize=0.4, label='SLAVE')
 
-    plt.plot(time_vector_m, master, 'r,', markersize=0.3)
-    plt.plot((time_vector_s+t_start_slave-t_start_master), slave, 'b,', markersize=0.3)
-    # plt.plot(time_vector_s, slave, 'b')
+    lgnd = plt.legend(loc='upper left', numpoints=1, fancybox=True, shadow=True)
+
     plt.show()
 
 
 if __name__ == '__main__':
-    project_root = pathlib.Path(os.getcwd())
-    project_root = project_root.parent
+    parser = argparse.ArgumentParser(description='', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('--project-dir', help='project root', type=str)
+    parser.add_argument('--data-dir', help='root of data directory that DAQ writes MASTER and SLAVE data too', type=str)
+    args = parser.parse_args()
 
-    new_tone_test = True
-    start_t = None
-    if '_TEST' in sys.argv[1]:
-        data_dir = os.path.abspath(sys.argv[1])
-        new_tone_test = False
-        start_t = float(sys.argv[2])
     try:
-        prompt('Hit enter when the test leads are connected to the payload box and the DAQs are running.')
-        data_dirs = sorted(pathlib.Path(project_root).glob('*_TEST'))
-        data_dir  = data_dirs[-1]
-        main(project_root, data_dir, new_tone_test, start_t)
+        main(args)
     except KeyboardInterrupt:
         pass
     finally:

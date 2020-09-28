@@ -14,8 +14,8 @@ import argparse
 from datetime import datetime
 from uldaq import (get_daq_device_inventory, DaqDevice, AInScanFlag, ScanStatus,
                    ScanOption, create_float_buffer, InterfaceType, AiInputMode, ULException)
-from async_daq_data_handler2 import AsyncDAQDataHandler
-import async_daq_data_handler2
+from async_daq_data_handler5 import AsyncDAQDataHandler
+# import async_daq_data_handler2
 # Methods for handling DAQ config and setup
 from daq_utils import (print_config,
                        print_total_channel_count, 
@@ -73,7 +73,7 @@ def main(args, master_dir, slave_dir):
                       'MASTER': args.sample_rate, 
                       'SLAVE': args.sample_rate
                       }     
-    samples_per_channel = args.sample_rate * args.channels * 30 # *30 gives use extra time to read
+    samples_per_channel = args.sample_rate * 30 # *30 gives use extra time to read
     file_length_sec = float(args.file_length_sec)
     v_range = {'MASTER': None, 'SLAVE': None}
     #
@@ -106,7 +106,6 @@ def main(args, master_dir, slave_dir):
                                                         ai_info=ai_info['SLAVE'], 
                                                         channel_range=(low_channel['SLAVE'], high_channel['SLAVE']))
         os.system('clear')
-        # Allocate a buffer to receive the data.
         data['SLAVE'] = create_float_buffer(channel_count['SLAVE'], samples_per_channel)
         if not args.quiet:
             # Print config options
@@ -132,6 +131,7 @@ def main(args, master_dir, slave_dir):
                                                      scan_options['SLAVE'], 
                                                      flags['SLAVE'], 
                                                      data['SLAVE'])
+
         async_writer_SLAVE = AsyncDAQDataHandler(float_buffer=data['SLAVE'], 
                                                  role='SLAVE', 
                                                  ai_device=ai_device['SLAVE'], 
@@ -141,7 +141,8 @@ def main(args, master_dir, slave_dir):
                                                  scan_options=display_scan_options(scan_options['SLAVE']),
                                                  v_range=v_range['SLAVE'],
                                                  input_mode=input_mode['SLAVE'],
-                                                 flags=flags['SLAVE'])
+                                                 flags=flags['SLAVE'],
+                                                 file_length=file_length_sec,)
         #
         # Now setup 'MASTER' DAQ
         # 
@@ -168,7 +169,8 @@ def main(args, master_dir, slave_dir):
                              print_head_space=False)
 
             # Start the acquisition for the 'MASTER' DAQ.
-            # .. when it starts it will thrigger the 'SLAVE'
+            # .. when it starts it will thrigger the 'SLAVE'\
+            pre_call = datetime.now()
             rate['MASTER'] = ai_device['MASTER'].a_in_scan(low_channel['MASTER'], 
                                                          high_channel['MASTER'], 
                                                          input_mode['MASTER'],
@@ -178,6 +180,18 @@ def main(args, master_dir, slave_dir):
                                                          scan_options['MASTER'], 
                                                          flags['MASTER'], 
                                                          data['MASTER'])
+            post_call = datetime.now()
+            # average times from pre scan start and post scan start
+            start_time_epoch = datetime.fromtimestamp(int(pre_call.timestamp() + post_call.timestamp()) / 2)
+            print_line(' <info><b>ACTUAL START TIME:</b></info> <time>{}</time> epoch:[<time>{}</time>]'.format(start_time_epoch, start_time_epoch.timestamp()))
+            print_line(' --data-dir \"{}\" --start-time {} '.format(data_dir['MASTER'][:data_dir['MASTER'].rfind('/')+1], 
+                                                                     start_time_epoch.timestamp()))
+            #
+            #   In CONTINUOUS scan mode the start time for MASTER and SLAVE
+            #   .. is the same. get the current time and use that as the start time for 
+            #   .. both AsyncDAQDataHandler-s
+            #
+
             async_writer_MASTER = AsyncDAQDataHandler(float_buffer=data['MASTER'], 
                                                       role='MASTER', 
                                                       ai_device=ai_device['MASTER'], 
@@ -187,14 +201,15 @@ def main(args, master_dir, slave_dir):
                                                       scan_options=display_scan_options(scan_options['MASTER']),
                                                       v_range=v_range['MASTER'],
                                                       input_mode=input_mode['MASTER'],
-                                                      flags=flags['MASTER'])
+                                                      flags=flags['MASTER'],
+                                                      file_length=file_length_sec)
             
             #
             #   Let Async file writes know we're ready 
             #   .. so they can start writing
             #
-            async_writer_MASTER.ready = True
-            async_writer_SLAVE.ready  = True
+            async_writer_MASTER.begin(start_time_epoch.timestamp())
+            async_writer_SLAVE.begin(start_time_epoch.timestamp())
 
             prev_index      = {'MASTER': 0, 'SLAVE': 0}
             index           = {'MASTER': 0, 'SLAVE': 0}
@@ -282,10 +297,12 @@ def main(args, master_dir, slave_dir):
                                  scan_options=scan_options['SLAVE'],
                                  role='SLAVE',
                                  print_head_space=False)
+                    print_line(' <info><b>ACTUAL START TIME:</b></info> <time>{}</time> epoch:[<time>{}</time>]'.format(start_time_epoch, start_time_epoch.timestamp()))
+
                 raise(KeyboardInterrupt)
             finally:
-                async_writer_MASTER.shutdown = True
-                async_writer_SLAVE.shutdown  = True
+                async_writer_MASTER.stop()
+                async_writer_SLAVE.stop()
                 time.sleep(2)
 
 if __name__ == '__main__':

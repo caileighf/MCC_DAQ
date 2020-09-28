@@ -23,6 +23,13 @@ def get_data(filename, selected_channel):
             data.append(float(channel_data[selected_channel]))
     return(data)
 
+def get_data_across_files(files, selected_channel):
+    data = []
+    start = float(files[0].stem)
+    for file in files:
+        data.extend(get_data(filename=file, selected_channel=selected_channel))
+    return(start, data)
+
 #
 # This method takes a list of files and a chunk size and
 # .. yields the list of floats returned by get_data() for chunk_size # of files
@@ -61,7 +68,7 @@ def get_files_in_window(files, start_t, end_t):
 #
 # This method takes the voltage and time data for a specific roles
 # .. data on a selected channel to create multiple plots
-def make_fig(t, x, NFFT, Fs, png_file_name, title, start_time, selected_channel):
+def make_fig(t, x, NFFT, Fs, png_file_name, title, start_time, selected_channel, show=False):
     fig = plt.figure(constrained_layout=True)
     fig.set_size_inches(17, 11)
 
@@ -92,7 +99,10 @@ def make_fig(t, x, NFFT, Fs, png_file_name, title, start_time, selected_channel)
     # save fig and output progress to console
     plt.savefig(png_file_name)
     print('Created: ' + png_file_name)
-    plt.close()
+
+    if show:
+        plt.show()
+    plt.close(fig)
 
 def get_files(path, role):
     return(sorted(pathlib.Path('{}/{}_DAQ/'.format(path, role)).glob('1*.txt')))
@@ -113,58 +123,47 @@ def main(args):
     figs = {}
     role = args.role
 
-    print('About to sort and aggregate all data files')
     for r in role:
         data_files[r] = get_files(path=args.data_directory, role=r)
         fig_dir[r]    = get_fig_dir(path=args.data_directory, role=r)
         data[r]       = []
         figs[r]       = []
-
-    print('Determining the number of files to read for the plot')
-    #
-    # Determine chunk size
-    # .. first check is user wants to do more than one file per plot
-    if args.start == None or args.end == None:
-        chunk_size = 1
-    else:
-        # figure out duration of time we care about
-        duration = args.end - args.start
-        # batch size for how many files to read at once
-        # .. if duration is 1 hour,
-        # .. 60 sec * 60 mins = 3600 seconds, 
-        # .. so, if file_length is 1.0 second and the duration is 3600 seconds, 
-        # .. the chunk size will be 3600 files
-        #
-        chunk_size = int(duration / args.file_length_sec)
+    print('Sorted and aggregated all data files')
 
     NFFT = args.nfft  # the length of the windowing segments
     Fs   = args.sample_rate  # the sampling frequency
 
     # loop through all the roles and create plots
-    while True:
-        for i in range(len(role)):
-            files_in_window = get_files_in_window(files=data_files[role[i]], start_t=args.start, end_t=args.end)
+    for i in range(len(role)):
+        files_in_window = get_files_in_window(files=data_files[role[i]], start_t=args.start, end_t=args.end)
+        j = 0
 
-            print('Starting batch for {} DAQ data:'.format(role[i]))
-            j = 0
-            for start_time, data in batch_files(files_in_window, chunk_size, args.channel):
-                if data == None:
-                    break
-                # Now plot data and save
-                title = 'Data for Channel {} on {} DAQ device data start (local time): {}'\
-                        .format(args.channel, role[i], datetime.fromtimestamp(start_time))
-                # import ipdb; ipdb.set_trace() # BREAKPOINT
-                # setup our time vector and data vector for this data
-                t = np.linspace(0.0, len(data), len(data))
-                x = data
-                # create the png file name
-                png_file_name = '{}/{}_ch{}_{}.png'.format(fig_dir[role[i]], role[i], args.channel, start_time)
-                # this will create and save the figure
-                make_fig(t, x, NFFT, Fs, png_file_name, title, datetime.fromtimestamp(start_time), args.channel)
-                print('[{}/{}]: '.format(j, len(files_in_window)), end='')
-                j+=1
-                input('Hit enter to continue...')
+        start_time, data = get_data_across_files(files_in_window, args.channel)
+        if len(data) <= 0:
+            break
+        print('Aggregated all {} DAQ data'.format(role[i]))
+        # Now plot data and save
+        title = 'Data for Channel {} on {} DAQ device data start (local time): {}'\
+                .format(args.channel, role[i], datetime.fromtimestamp(start_time))
+        # import ipdb; ipdb.set_trace() # BREAKPOINT
+        # setup our time vector and data vector for this data
+        t = np.linspace(0.0, len(data), len(data))
+        x = data
+        # create the png file name
+        png_file_name = '{}/{}_ch{}_{}.png'.format(fig_dir[role[i]], role[i], args.channel, start_time)
+        # this will create and save the figure
 
+        print('Creating Spectrogram for {} DAQ data:'.format(role[i]))
+        if not args.script:
+            make_fig(t, x, NFFT, Fs, png_file_name, title, datetime.fromtimestamp(start_time), args.channel, show=args.show_fig)
+        else:
+            make_fig(t, x, NFFT, Fs, png_file_name, title, datetime.fromtimestamp(start_time), args.channel)
+
+        print('[{}/{}]: '.format(j, len(files_in_window)), end='')
+        j+=1
+
+        if not args.script:
+            input('Hit enter to continue...')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -177,6 +176,8 @@ if __name__ == '__main__':
     parser.add_argument('--end', help='End time for window of data', required=False, type=float)
     parser.add_argument('--debug', help='Show debugging print messages', action='store_true')
     parser.add_argument('--quiet', help='No Console Output', action='store_true')
+    parser.add_argument('--show-fig', help='Show each fig? Default is False', action='store_true')    
+    parser.add_argument('--tone-test', help='Cancel out signals from both DAQs - default False', action='store_true')    
     parser.add_argument('--verbose', help='Verbose output - may slow process on slower CPUs', action='store_true')
     parser.add_argument('--mode', help='Data output mode', choices=['binary', 'text'], required=False)
     parser.add_argument('--role', nargs='*', help='Prefix to data directory for multiple DAQs Defaults to MASTER/SLAVE', required=False)

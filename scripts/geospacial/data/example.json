@@ -1,0 +1,102 @@
+// Example AIS 
+{
+    "type":"Feature",
+    "geometry":
+    {
+        "type":"Point",
+        "coordinates":[-70.6707650,41.5148783]},
+        "properties":
+        {
+            "mmsi":"367130910",
+            "aistype":3,
+            "cog":167.6,
+            "sog":12.0,
+            "trueHeading":170,
+            "navStatus":0,
+            "posAcc":1,
+            "smi":0,
+            "ts":false
+        }
+}
+
+// Example GPS -- Collection
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "timestamp": ""
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.70011138916016,
+          41.491477924441575
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.7131576538086,
+          41.47218750011575
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.6863784790039,
+          41.47746078637662
+        ]
+      }
+    }
+  ]
+}
+
+// Example
+{
+    "type": "FeatureCollection",
+    "features": 
+    [
+        { 
+        "type": "Feature", 
+        "properties": 
+            { 
+                "GEO_ID": "0400000US01", 
+                "STATE": "01", 
+                "NAME": "Alabama", 
+                "LSAD": "",
+                "CENSUSAREA": 50645.326000 
+            }, 
+        "geometry": { 
+        "type": "MultiPolygon", 
+        "coordinates":  
+            [ 
+                [ 
+                    [ -88.124658, 30.283640 ], 
+                    [ -88.086812, 30.259864 ], 
+                    [ -88.074854, 30.249119 ], 
+                    [ -88.075856, 30.246139 ], 
+                    [ -88.078786, 30.245039 ], 
+                    [ -88.109432, 30.242097 ], 
+                    [ -88.120151, 30.246149 ], 
+                    [ -88.137083, 30.249179 ], 
+                    [ -88.166569, 30.249255 ], 
+                    [ -88.208540, 30.244807 ], 
+                    [ -88.280571, 30.230274 ], 
+                    [ -88.304773, 30.228031 ], 
+                    [ -88.313323, 30.230024 ] 
+                ] 
+            ] 
+        ]
+    ]
+}
+

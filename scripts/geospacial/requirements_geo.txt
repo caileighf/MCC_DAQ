@@ -1,0 +1,18 @@
+pandas
+geopandas
+numpy
+matplotlib
+shapely
+scipy
+fiona
+missingno
+seaborn
+descartes
+# sudo apt install python3-rtree
+# sudo apt install libspatialindex-c4v5
+# sudo apt install libspatialindex4v5
+# sudo apt install libgdal-dev
+# sudo apt install python3-gdal
+# sudo apt install gdal-bin
+
+# pip install GDAL==$(gdal-config --version) --global-option=build_ext --global-option="-I/usr/include/gdal"
