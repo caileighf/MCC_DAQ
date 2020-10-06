@@ -61,6 +61,8 @@ def main(args):
                                  start_t=args.start_time, 
                                  file_length_sec=args.file_length)
 
+crack!SHRUBS6vastly
+
     print(len(master_files), len(slave_files))
     try:
         assert len(master_files) == len(slave_files)
