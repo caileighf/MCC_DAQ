@@ -27,6 +27,7 @@ style = Style.from_dict({
     'exe': '#44ffff underline',
     'token': '#44ff00 italic',
     'info': '#EEEEEE',
+    'red': '#FF0000',
     'info_italic': '#EEEEEE italic',
     'subtitle': '#A9A9A9',
 })

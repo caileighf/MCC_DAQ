@@ -38,7 +38,8 @@ def display_scan_options(bit_mask):
 def print_total_channel_count(num_channels):
     print_line('\nTotal Channels (combined DAQ channel count): <token><b>{}</b></token>'.format(num_channels), l_style='info')
 
-def print_config(sample_rate, file_length, data_directory, input_mode, channel_range, voltage_range, scan_options, role=None, print_head_space=True, mode='Text', is_actual=False,**kwargs):
+def print_config(sample_rate, file_length, data_directory, input_mode, channel_range, voltage_range, scan_options, 
+    role=None, print_head_space=True, mode='Text', is_actual=False, trig_mode=None, **kwargs):
     if print_head_space:
         print('{}'.format('\n'*(channel_range[1]+10)))
     else:
@@ -61,6 +62,8 @@ def print_config(sample_rate, file_length, data_directory, input_mode, channel_r
     print_line(' | Voltage Range        : %s         '%voltage_range)
     print_line(' | Low Channel          : %d         '%(channel_range[0]))
     print_line(' | High Channel         : %d         '%(channel_range[1]))
+    if trig_mode != None:
+        print_line(' | Trigger Type         : {}         '.format(trig_mode))
     print_line(' |----------------------------------------------------- ')
 
 def get_daq_choice(role):
@@ -198,7 +201,7 @@ def config_daq(daq_device, ai_info, channel_range):
 
     return(input_mode, channel_count, ranges[range_index])
 
-def create_output_str(transfer_status, rate, role=None):
+def create_output_str(transfer_status, rate, scans_run=None, trig_mode=None, role=None):
     # Build output string
     output_str = []
     if role is None:
@@ -206,10 +209,15 @@ def create_output_str(transfer_status, rate, role=None):
     else:
         output_str.append('Data from <title>{}</title> Device'.format(role))
     output_str.append('<b>Actual scan rate  =</b> {:.3f} Hz'.format(rate))
-    output_str.append('<b>CurrentTotalCount =</b> {}'.format(transfer_status.current_total_count))
-    output_str.append('<b>CurrentScanCount  =</b> {}'.format(transfer_status.current_scan_count))
-    output_str.append('<b>CurrentIndex      =</b> {}'.format(transfer_status.current_index))
-    output_str.append('\n')
-    output_str.append('<b>Channel   | Raw Voltage</b>')
-    output_str.append('<b>------------------------</b>')
+    if scans_run == None:
+        output_str.append('<b>CurrentScanCount  =</b> {}'.format(transfer_status.current_scan_count))
+    else:
+        output_str.append('<b>Scans Run         =</b> {}'.format(scans_run))
+    if trig_mode == None:
+        output_str.append('<b>CurrentTotalCount =</b> {}'.format(transfer_status.current_total_count))
+        output_str.append('<b>CurrentIndex      =</b> {}'.format(transfer_status.current_index))
+        output_str.append('\n')
+    output_str.append('<b>-------------------------</b>')
+    output_str.append('<b>Channel     | <red>Raw Voltage</red></b>')
+    output_str.append('<b>-------------------------</b>')
     return(output_str)
