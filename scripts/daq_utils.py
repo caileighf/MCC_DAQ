@@ -41,7 +41,7 @@ def print_total_channel_count(num_channels):
 def print_config(sample_rate, file_length, data_directory, input_mode, channel_range, voltage_range, scan_options, 
     role=None, print_head_space=True, mode='Text', is_actual=False, trig_mode=None, **kwargs):
     if print_head_space:
-        print('{}'.format('\n'*(channel_range[1]+10)))
+        print('{}'.format('\n'*(channel_range[1]+11)))
     else:
         print('')
     print_line(' |----------------------------------------------------- ')
@@ -216,7 +216,6 @@ def create_output_str(transfer_status, rate, scans_run=None, trig_mode=None, rol
     if trig_mode == None:
         output_str.append('<b>CurrentTotalCount =</b> {}'.format(transfer_status.current_total_count))
         output_str.append('<b>CurrentIndex      =</b> {}'.format(transfer_status.current_index))
-        output_str.append('\n')
     output_str.append('<b>-------------------------</b>')
     output_str.append('<b>Channel     | <red>Raw Voltage</red></b>')
     output_str.append('<b>-------------------------</b>')

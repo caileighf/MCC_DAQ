@@ -35,6 +35,9 @@ from prompt_utils import (print_title,
                           path_validator, PathCompleter,
                           number_validator, float_validator, style)
 
+def get_loading_char(mod):
+    return('/' if mod%2==0 else '\\')
+
 def main(args):
     """Single DAQ Collection CONTINUOUS."""
     daq_device     = None
@@ -91,7 +94,7 @@ def main(args):
 
         # Start the acquisition.
         pre_call = datetime.now()
-        rate = ai_device.a_in_scan(low_channel, high_channel, input_mode,
+        ack_rate = ai_device.a_in_scan(low_channel, high_channel, input_mode,
                                    v_range, samples_per_channel,
                                    rate, scan_options, flags, data)
         post_call = datetime.now()
@@ -117,12 +120,12 @@ def main(args):
                      input_mode=input_mode.name, 
                      channel_range=(low_channel, high_channel), 
                      voltage_range=v_range, 
-                     scan_options=scan_options,
-                     is_actual=True)
+                     scan_options=scan_options)
 
         # start file writer thread
         async_writer.begin(start_time_epoch.timestamp())
         prev_index=0
+        heart_beat_count=0
         try:
             start=time.time()
             print_line('\n | <info>CTRL + C to terminate the process</info>       ')
@@ -135,10 +138,14 @@ def main(args):
                     index = transfer_status.current_index
                     reset_cursor()
                     clear_eol()
+                    heart_beat_count += 1
+                    if heart_beat_count >= 1000:
+                        heart_beat_count = 0
+                    print('Scanning... {}'.format(get_loading_char(heart_beat_count)))
                     output_str = create_output_str(transfer_status, rate)
                     # now append channel values
                     for i in range(channel_count):
-                        output_str.append('<b>Channel</b> [<b>{}</b>] = {:.6f}'.format(i+low_channel, data[index + i]))
+                        output_str.append('<b>Channel</b> [<b>{}</b>] = <red>{:.6f}</red>'.format(i+low_channel, data[index + i]))
                     print_lines(output_str)
                     print('')
 
@@ -154,8 +161,7 @@ def main(args):
                          channel_range=(low_channel, high_channel), 
                          voltage_range=v_range, 
                          scan_options=scan_options,
-                         print_head_space=False,
-                         is_actual=True)
+                         print_head_space=False)
             raise(KeyboardInterrupt)
         finally:
             async_writer.stop()
