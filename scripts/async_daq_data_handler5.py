@@ -142,6 +142,9 @@ class AsyncDAQDataHandler(object):
                 l.write('Buffer length:    {}\n'.format(self.buffer_length))
                 l.write('current_index:    {}\n'.format(self.current_index))
                 l.write('Rows written:     {}\n'.format(self.rows_written))
+                l.write('Rows per file:    {}\n'.format(self.file_length_rows))
+                l.write('File length sec:  {}\n'.format(self.file_length))
+                l.write('Sample rate Hz:   {}\n'.format(self.sample_rate))
 
             self.unwritten_rows = remaining_rows
             self.rows_written += self.file_length_rows

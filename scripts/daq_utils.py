@@ -38,7 +38,7 @@ def display_scan_options(bit_mask):
 def print_total_channel_count(num_channels):
     print_line('\nTotal Channels (combined DAQ channel count): <token><b>{}</b></token>'.format(num_channels), l_style='info')
 
-def print_config(sample_rate, file_length, data_directory, input_mode, channel_range, voltage_range, scan_options, role=None, print_head_space=True, mode='Text',**kwargs):
+def print_config(sample_rate, file_length, data_directory, input_mode, channel_range, voltage_range, scan_options, role=None, print_head_space=True, mode='Text', is_actual=False,**kwargs):
     if print_head_space:
         print('{}'.format('\n'*(channel_range[1]+10)))
     else:
@@ -49,7 +49,10 @@ def print_config(sample_rate, file_length, data_directory, input_mode, channel_r
     else:
         print_line(' | <info><b>DAQ Configuration for <title>{}</title> device</b></info>'.format(role))
     print_line(' |----------------------------------------------------- ')
-    print_line(' | Sample Rate (Hz)     : %ld        '%sample_rate)
+    if is_actual:
+        print_line(' | Sample Rate (Hz)     : %ld * ACTUAL'%sample_rate)
+    else:
+        print_line(' | Sample Rate (Hz)     : %ld    '%sample_rate)
     print_line(' | File Length (seconds): %d         '%file_length)
     print_line(' | Data Directory       : %s         '%data_directory)
     print_line(' | Mode {Binary | Text} : %s         '%mode)

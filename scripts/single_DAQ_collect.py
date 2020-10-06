@@ -11,9 +11,11 @@ import sys
 import time
 import os
 import argparse
+from datetime import datetime
 from uldaq import (get_daq_device_inventory, DaqDevice, AInScanFlag, ScanStatus,
                    ScanOption, create_float_buffer, InterfaceType, AiInputMode, ULException)
-from async_daq_data_handler import AsyncDAQDataHandler
+# from async_daq_data_handler import AsyncDAQDataHandler
+from async_daq_data_handler5 import AsyncDAQDataHandler
 # Methods for handling DAQ config and setup
 from daq_utils import (print_config, 
                        config_daq, 
@@ -88,9 +90,14 @@ def main(args):
                 pass
 
         # Start the acquisition.
+        pre_call = datetime.now()
         rate = ai_device.a_in_scan(low_channel, high_channel, input_mode,
                                    v_range, samples_per_channel,
                                    rate, scan_options, flags, data)
+        post_call = datetime.now()
+        # average times from pre scan start and post scan start
+        start_time_epoch = datetime.fromtimestamp(int(pre_call.timestamp() + post_call.timestamp()) / 2)
+
         async_writer = AsyncDAQDataHandler(float_buffer=data, 
                                            role='SINGLE', 
                                            ai_device=ai_device, 
@@ -100,7 +107,21 @@ def main(args):
                                            scan_options=display_scan_options(scan_options),
                                            v_range=v_range,
                                            input_mode=input_mode,
-                                           flags=flags)
+                                           flags=flags,
+                                           file_length=file_length_sec)
+        os.system('clear')
+        # Print config options
+        print_config(sample_rate=rate, 
+                     file_length=file_length_sec, 
+                     data_directory=data_dir, 
+                     input_mode=input_mode.name, 
+                     channel_range=(low_channel, high_channel), 
+                     voltage_range=v_range, 
+                     scan_options=scan_options,
+                     is_actual=True)
+
+        # start file writer thread
+        async_writer.begin(start_time_epoch.timestamp())
         prev_index=0
         try:
             start=time.time()
@@ -121,16 +142,6 @@ def main(args):
                     print_lines(output_str)
                     print('')
 
-                    #
-                    #   Every <file_length_sec> second(s) read from circular buffer,
-                    #   .. starting at the previous index up to the current index
-                    #   .. then set previous index to current index
-                    #
-                    if time.time()-start >= file_length_sec:
-                        start=time.time()
-                        # write data to file
-                        async_writer.do_write(start_time=start)
-
                 except (ValueError, NameError, SyntaxError):
                     raise
         except KeyboardInterrupt:
@@ -143,8 +154,11 @@ def main(args):
                          channel_range=(low_channel, high_channel), 
                          voltage_range=v_range, 
                          scan_options=scan_options,
-                         print_head_space=False)
+                         print_head_space=False,
+                         is_actual=True)
             raise(KeyboardInterrupt)
+        finally:
+            async_writer.stop()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='', formatter_class=argparse.ArgumentDefaultsHelpFormatter)

@@ -107,18 +107,6 @@ def main(args, master_dir, slave_dir):
                                                         channel_range=(low_channel['SLAVE'], high_channel['SLAVE']))
         os.system('clear')
         data['SLAVE'] = create_float_buffer(channel_count['SLAVE'], samples_per_channel)
-        if not args.quiet:
-            # Print config options
-            print_config(sample_rate=rate['SLAVE'], 
-                         file_length=file_length_sec, 
-                         data_directory=data_dir['SLAVE'], 
-                         input_mode=input_mode['SLAVE'].name, 
-                         channel_range=(low_channel['SLAVE'], high_channel['SLAVE']), 
-                         voltage_range=v_range['SLAVE'], 
-                         scan_options=scan_options['SLAVE'],
-                         role='SLAVE',
-                         print_head_space=False)
-            print_total_channel_count(args.channels)
 
         # Start the acquisition for the 'SLAVE' DAQ.
         # .. it will wait for the 'MASTER' DAQ's EXTCLOCK signal
@@ -131,6 +119,19 @@ def main(args, master_dir, slave_dir):
                                                      scan_options['SLAVE'], 
                                                      flags['SLAVE'], 
                                                      data['SLAVE'])
+        if not args.quiet:
+            # Print config options
+            print_config(sample_rate=rate['SLAVE'], 
+                         file_length=file_length_sec, 
+                         data_directory=data_dir['SLAVE'], 
+                         input_mode=input_mode['SLAVE'].name, 
+                         channel_range=(low_channel['SLAVE'], high_channel['SLAVE']), 
+                         voltage_range=v_range['SLAVE'], 
+                         scan_options=scan_options['SLAVE'],
+                         role='SLAVE',
+                         print_head_space=False,
+                         is_actual=True)
+            print_total_channel_count(args.channels)
 
         async_writer_SLAVE = AsyncDAQDataHandler(float_buffer=data['SLAVE'], 
                                                  role='SLAVE', 
@@ -156,17 +157,6 @@ def main(args, master_dir, slave_dir):
 
             # Allocate a buffer to receive the data.
             data['MASTER'] = create_float_buffer(channel_count['MASTER'], samples_per_channel)
-            if not args.quiet:
-                # Print config options
-                print_config(sample_rate=rate['MASTER'], 
-                             file_length=file_length_sec, 
-                             data_directory=data_dir['MASTER'], 
-                             input_mode=input_mode['MASTER'].name, 
-                             channel_range=(low_channel['MASTER'], high_channel['MASTER']), 
-                             voltage_range=v_range['MASTER'], 
-                             scan_options=scan_options['MASTER'],
-                             role='MASTER',
-                             print_head_space=False)
 
             # Start the acquisition for the 'MASTER' DAQ.
             # .. when it starts it will thrigger the 'SLAVE'\
@@ -183,6 +173,20 @@ def main(args, master_dir, slave_dir):
             post_call = datetime.now()
             # average times from pre scan start and post scan start
             start_time_epoch = datetime.fromtimestamp(int(pre_call.timestamp() + post_call.timestamp()) / 2)
+
+            if not args.quiet:
+                # Print config options
+                print_config(sample_rate=rate['MASTER'], 
+                             file_length=file_length_sec, 
+                             data_directory=data_dir['MASTER'], 
+                             input_mode=input_mode['MASTER'].name, 
+                             channel_range=(low_channel['MASTER'], high_channel['MASTER']), 
+                             voltage_range=v_range['MASTER'], 
+                             scan_options=scan_options['MASTER'],
+                             role='MASTER',
+                             print_head_space=False,
+                             is_actual=True)
+
             print_line(' <info><b>ACTUAL START TIME:</b></info> <time>{}</time> epoch:[<time>{}</time>]'.format(start_time_epoch, start_time_epoch.timestamp()))
             print_line(' --data-dir \"{}\" --start-time {} '.format(data_dir['MASTER'][:data_dir['MASTER'].rfind('/')+1], 
                                                                      start_time_epoch.timestamp()))
@@ -286,7 +290,8 @@ def main(args, master_dir, slave_dir):
                                  voltage_range=v_range['MASTER'], 
                                  scan_options=scan_options['MASTER'],
                                  role='MASTER',
-                                 print_head_space=False)
+                                 print_head_space=False,
+                                 is_actual=True)
                     print_total_channel_count(args.channels)
                     print_config(sample_rate=rate['SLAVE'], 
                                  file_length=file_length_sec, 
@@ -296,7 +301,8 @@ def main(args, master_dir, slave_dir):
                                  voltage_range=v_range['SLAVE'], 
                                  scan_options=scan_options['SLAVE'],
                                  role='SLAVE',
-                                 print_head_space=False)
+                                 print_head_space=False,
+                                 is_actual=True)
                     print_line(' <info><b>ACTUAL START TIME:</b></info> <time>{}</time> epoch:[<time>{}</time>]'.format(start_time_epoch, start_time_epoch.timestamp()))
 
                 raise(KeyboardInterrupt)
