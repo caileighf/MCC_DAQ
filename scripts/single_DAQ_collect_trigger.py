@@ -147,7 +147,7 @@ def main(args):
                      scan_options=scan_options,
                      trig_mode=trigger_type[0])
 
-        scans_run=1
+        scans_run=0
         heart_beat_count=0
         prev_index=0
         triggered=False
