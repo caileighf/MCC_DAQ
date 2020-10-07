@@ -58,7 +58,7 @@ def main(override):
         if 'trig_type' not in user_set_config:
             user_set_config['trig_type'] = data['DEFAULT_TRIGGERED'][0]['trig_type'][0] # first opt POS_EDGE
         print_pre_prompt(title='DAQ Mode',
-                         default=user_set_config['trig_type'],
+                         default=user_set_config['trig_type'][0],
                          default_style='token')
         print_verbose_options('Trigger Options', data['DEFAULT_TRIGGERED'][0]['trig_type'])
         user_input = prompt_user(completer=trigger_type_completer, validator=trigger_type_validator)
