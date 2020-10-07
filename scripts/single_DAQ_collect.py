@@ -23,6 +23,7 @@ from daq_utils import (print_config,
                        config_ai_device,
                        create_output_str,
                        display_scan_options,
+                       get_config_options,
                        clear_eol,
                        reset_cursor)
 # Methods for interactive prompt when user chooses interactive mode at runtime
@@ -152,6 +153,7 @@ def main(args):
                 except (ValueError, NameError, SyntaxError):
                     raise
         except KeyboardInterrupt:
+            os.system('clear')
             time.sleep(0.2)
             os.system('clear')
             print_config(sample_rate=rate, 
@@ -178,10 +180,16 @@ if __name__ == '__main__':
     parser.add_argument('--mode', help='Data output mode', choices=['binary', 'text'], required=False)
     parser.add_argument('-i', '--interactive', help='Set parameters interactively or, use passed values (or default values)', action='store_true')
     parser.add_argument('-s', '--script', help='Run from script (Will not ask for user input)', action='store_true')
+    parser.add_argument('--use-config', help='Use config file', action='store_true')
     parser.set_defaults(channels=1, sample_rate=38400, file_length_sec=1.0, data_directory=os.getcwd()+'/data', mode='text')
     args = parser.parse_args()
     if args.script:
         args.quiet = True
+
+    if args.use_config:
+        args.interactive = False
+        args = get_config_options(args)
+
     time.sleep(0.2)
     os.system('clear')
     

@@ -1,0 +1,9 @@
+{
+    "channels": 1,
+    "data_directory": "/home/caileigh/repos/MCC_DAQ/data",
+    "file_length_sec": 1.0,
+    "file_mode": "text",
+    "mode": "CONTINUOUS",
+    "sample_rate": 19200,
+    "trig_type": "POS_EDGE"
+}

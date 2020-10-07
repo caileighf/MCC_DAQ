@@ -1,0 +1,48 @@
+{
+    "DEFAULT_CONTINUOUS": [
+        {
+            "mode": "TRIGGERED",
+            "sample_rate": [19200],
+            "file_length_sec": [1.0],
+            "data_directory": ["./data"],
+            "channels": [1, 2, 3, 4, 5, 6, 7],
+            "file_mode": [
+                ["text", "Data files will be csv text files"],
+                ["binary", "Data files will be csv binary files"]
+            ]
+        }
+    ],
+    "DEFAULT_TRIGGERED": [
+        {
+            "mode": "TRIGGERED",
+            "sample_rate": [19200],
+            "file_length_sec": [1.0],
+            "data_directory": ["./data"],
+            "channels": [1, 2, 3, 4, 5, 6, 7],
+            "file_mode": [
+                ["text", "Data files will be csv text files"],
+                ["binary", "Data files will be csv binary files"]
+            ],
+            "trig_type": [
+                ["POS_EDGE", "A digital trigger. The trigger condition is met when the trigger input transitions from a logic low level to a logic high level. This is the default condition when triggering is enabled. All others require configuration using the subsystem set_trigger() functions."], 
+                ["NEG_EDGE", "A digital trigger. The trigger condition is met when the trigger input transitions from a logic high level to a logic low level."],
+                ["HIGH", "A digital trigger. The trigger condition is met when the trigger input is at a logic high level."],
+                ["LOW", "A digital trigger. The trigger condition is met when the trigger input is at a logic low level."]
+            ]
+        }
+    ],
+    "USER_SET_CONFIG": [
+        {
+            "mode": "CONTINUOUS",
+            "sample_rate": 19200,
+            "file_length_sec": 1.0,
+            "data_directory": "./data",
+            "channels": 1,
+            "file_mode": "text"
+        }
+    ],
+    "MODES": [
+        ["CONTINUOUS", "Scans data in an endless loop."],
+        ["TRIGGERED", "Sampling begins when a trigger condition is met."]
+    ]
+}

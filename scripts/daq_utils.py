@@ -220,3 +220,18 @@ def create_output_str(transfer_status, rate, scans_run=None, trig_mode=None, rol
     output_str.append('<b>Channel     | <red>Raw Voltage</red></b>')
     output_str.append('<b>-------------------------</b>')
     return(output_str)
+
+def get_config_options(args):
+    import json
+    with open('{}/config.json'.format(os.getcwd()), 'r') as f:
+        data = json.load(f)
+    
+    args.data_directory = data['data_directory']
+    args.channels = data['channels']
+    args.file_length_sec = data['file_length_sec']
+    args.sample_rate = data['sample_rate']
+    args.mode = data['file_mode']
+
+    if 'trig_type' in data:
+        args.trig_type = data['trig_type']
+    return(args)

@@ -84,6 +84,28 @@ daq_validator = Validator.from_callable(is_valid_daq_choice,
                                         error_message='Must select one of the available devices',
                                         move_cursor_to_end=True)
 
+valid_trigger_types = ['POS_EDGE', 'NEG_EDGE', 'HIGH', 'LOW']
+trigger_type_completer = WordCompleter(valid_trigger_types)
+def is_valid_trigger_type(text):
+    if text in valid_trigger_types or text == '':
+        return(True)
+    else:
+        return(False)
+trigger_type_validator = Validator.from_callable(is_valid_trigger_type,
+                                        error_message='Available trigger type are: POS_EDGE, NEG_EDGE, HIGH, LOW',
+                                        move_cursor_to_end=True)
+
+valid_modes = ['CONTINUOUS', 'TRIGGERED']
+mode_completer = WordCompleter(valid_modes)
+def is_valid_mode(text):
+    if text in valid_modes or text == '':
+        return(True)
+    else:
+        return(False)
+mode_validator = Validator.from_callable(is_valid_mode,
+                                        error_message='Available modes are: CONTINUOUS and TRIGGERED',
+                                        move_cursor_to_end=True)
+
 def is_number(text):
     if text == '':
         return(True)
@@ -182,6 +204,13 @@ def print_pre_prompt_options(title, list_options):
         print_formatted_text(HTML(' [<b>{}</b>] <subtitle>{}</subtitle>'.format(i+1, list_options[i])), style=style)
     print('\n')
 
+def print_verbose_options(title, list_options):
+    print_formatted_text(HTML('<subtitle>{}</subtitle>'.format(title)), style=style)
+    for i in range(len(list_options)):
+        print_formatted_text(HTML(' [<b>{}</b>] <subtitle>{}</subtitle> '.format(i+1, list_options[i][0])), style=style, end='')
+        print_formatted_text(HTML('-- <info_italic>{}</info_italic>'.format(list_options[i][1])), style=style)
+    print('\n')
+
 def print_pre_prompt(title, default, default_style):
     print_formatted_text(HTML('<subtitle>{}</subtitle>'.format(title)), style=style)
     if default == None:
@@ -200,6 +229,8 @@ def print_post_prompt(arg, val, val_style):
                                                                                      val_style)), style=style)
 
 def prompt_user(text='> ', completer=None, validator=None):
+    if completer != None:
+        print_title('(TAB Complete Available)', print_bar=False)
     return('{}'.format(prompt(text, completer=completer, validator=validator, complete_while_typing=True)))
 
 def get_yes_no(text, title=None):

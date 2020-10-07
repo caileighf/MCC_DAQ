@@ -1,0 +1,5 @@
+#!/bin/bash
+
+MODE="$(grep -Po '\"mode\":.*?[^\\]\",' config.json)"\
+ && echo $MODE | grep "CONTINUOUS" > /dev/null \
+  && source run_single_continuous.sh || source run_single_triggered.sh

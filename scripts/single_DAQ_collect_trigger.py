@@ -22,6 +22,7 @@ from daq_utils import (print_config,
                        config_ai_device,
                        create_output_str,
                        display_scan_options,
+                       get_config_options,
                        clear_eol,
                        reset_cursor)
 # Methods for interactive prompt when user chooses interactive mode at runtime
@@ -238,9 +239,16 @@ if __name__ == '__main__':
     parser.add_argument('--trig-type', help='Trigger type', choices=['POS_EDGE', 'NEG_EDGE', 'HIGH', 'LOW'], required=False)
     parser.add_argument('-i', '--interactive', help='Set parameters interactively or, use passed values (or default values)', action='store_true')
     parser.add_argument('-s', '--script', help='Run from script (Will not ask for user input)', action='store_true')
+    parser.add_argument('--use-config', help='Use config file', action='store_true')
     parser.set_defaults(channels=1, sample_rate=38400, file_length_sec=1.0, data_directory=os.getcwd()+'/data', mode='text', trig_type='POS_EDGE')
     args = parser.parse_args()
-    
+    if args.script:
+        args.quiet = True
+
+    if args.use_config:
+        args.interactive = False
+        args = get_config_options(args)
+
     # create tuples for trig type enums to use in setting trigger
     trig_types = [
         ('POS_EDGE', TriggerType.POS_EDGE), 
@@ -250,8 +258,6 @@ if __name__ == '__main__':
         ]
     args.trig_type = [pair for pair in trig_types if pair[0] == args.trig_type][0]
 
-    if args.script:
-        args.quiet = True
     time.sleep(0.2)
     os.system('clear')
     
