@@ -1,4 +1,3 @@
-#! python
 from scripts.prompt_utils import (print_title,
                                   print_line,
                                   print_lines, 
