@@ -249,7 +249,7 @@ if __name__ == '__main__':
         #
         main(args)
     except ULException as e:
-        print_line('\n\tUL Specific Exception Thrown: ', e)
+        print_line('\n\tDAQ Port could be taken')
 
     except KeyboardInterrupt:
         print_line('\n\n\tEnding...\n')

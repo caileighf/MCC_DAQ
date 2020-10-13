@@ -2,7 +2,7 @@
 
 CONFIG_FILE=$(cat $HOME/ACBOX/MCC_DAQ/config.json) 
 DATA_DIR=$( echo "$CONFIG_FILE"  | jsawk 'return this.data_directory' )\
- && cp "$CONFIG_FILE" "${DATA_DIR}/SINGLE_config_$(date +"%s").json"
+ && cp "$HOME/ACBOX/MCC_DAQ/config.json" "${DATA_DIR}/SINGLE_config_$(date +"%s").json"
 
 MODE="$(grep -Po '\"mode\":.*?[^\\]\",' config.json)"\
  && echo $MODE | grep "CONTINUOUS" > /dev/null \
